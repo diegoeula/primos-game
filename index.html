@@ -114,24 +114,24 @@
     gap: clamp(8px, 1.5vw, 14px);
   }
   .btn {
-    /* Botones discretos en mobile (chicos y translúcidos) */
+    /* Botones muy translúcidos en mobile */
     width: clamp(48px, 8.5vw, 68px);
     height: clamp(48px, 8.5vw, 68px);
-    background: rgba(255,255,255,0.12);
-    border: 2px solid rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.22);
     border-radius: 50%;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.55);
     font-size: clamp(20px, 3.5vw, 30px);
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: auto;
     cursor: pointer;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(1px);
     transition: transform 0.05s, background 0.05s, opacity 0.05s;
     -webkit-tap-highlight-color: transparent;
   }
-  .btn:active { background: rgba(255,255,255,0.35); transform: scale(0.92); }
+  .btn:active { background: rgba(255,255,255,0.22); color: rgba(255,255,255,0.9); transform: scale(0.92); }
   #title {
     position: absolute;
     top: 50%;
