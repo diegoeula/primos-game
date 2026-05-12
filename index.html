@@ -15,8 +15,10 @@
     margin: 0;
     background: #0d2818;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: clamp(4px, 1vh, 12px);
     min-height: 100vh;
     min-height: 100dvh; /* dynamic viewport — mobile safe-area aware */
     font-family: system-ui, -apple-system, sans-serif;
@@ -25,14 +27,17 @@
     color: white;
     /* Respetar safe-area en iPhone (notch) */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    --controls-h: 0px;
   }
+  /* Cuando los controles táctiles están visibles, reservamos espacio abajo para ellos */
+  body:has(#controls:not(.hide)) { --controls-h: clamp(72px, 13vh, 110px); }
   #wrap {
     position: relative;
-    /* Ocupa todo el viewport disponible manteniendo el aspect 8:5 */
-    width: min(100vw, calc(100vh * 8 / 5));
-    height: min(100vh, calc(100vw * 5 / 8));
-    width: min(100dvw, calc(100dvh * 8 / 5));
-    height: min(100dvh, calc(100dvw * 5 / 8));
+    /* Ocupa todo el viewport disponible manteniendo aspect 8:5
+       y dejando espacio para la barra de controles abajo (si está visible) */
+    width: min(100dvw, calc((100dvh - var(--controls-h) - 16px) * 8 / 5));
+    height: min(calc(100dvh - var(--controls-h) - 16px), calc(100dvw * 5 / 8));
+    flex-shrink: 0;
   }
   canvas {
     display: block;
@@ -101,17 +106,20 @@
     margin-top: 16px;
   }
   #controls {
-    position: absolute;
-    bottom: clamp(8px, 2.5vh, 24px);
-    left: clamp(8px, 2vw, 24px);
-    right: clamp(8px, 2vw, 24px);
+    /* Ahora afuera del cuadro del juego, como barra de controles abajo */
+    position: relative;
+    width: min(100dvw, calc((100dvh - var(--controls-h) - 16px) * 8 / 5));
+    height: var(--controls-h);
+    padding: 0 clamp(8px, 3vw, 20px);
     display: flex;
     justify-content: space-between;
+    align-items: center;
     pointer-events: none;
+    flex-shrink: 0;
   }
   .side {
     display: flex;
-    gap: clamp(8px, 1.5vw, 14px);
+    gap: clamp(8px, 2vw, 18px);
   }
   .btn {
     /* Botones muy translúcidos en mobile */
@@ -176,7 +184,7 @@
 
   /* === Modales reutilizables (ranking, config teclas, menú) === */
   .modal {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.75);
     display: flex;
@@ -398,16 +406,19 @@
       </div>
     </div>
   </div>
-  <div id="controls" class="hide">
-    <div class="side">
-      <div class="btn" id="btn-left">◀</div>
-      <div class="btn" id="btn-right">▶</div>
-    </div>
-    <div class="side">
-      <div class="btn" id="btn-attack">✊</div>
-      <div class="btn" id="btn-jump">▲</div>
-    </div>
+  <!-- Cierra el #wrap acá -->
+</div>
+<!-- Controles táctiles AFUERA del cuadro del juego, como barra abajo -->
+<div id="controls" class="hide">
+  <div class="side">
+    <div class="btn" id="btn-left">◀</div>
+    <div class="btn" id="btn-right">▶</div>
   </div>
+  <div class="side">
+    <div class="btn" id="btn-attack">✊</div>
+    <div class="btn" id="btn-jump">▲</div>
+  </div>
+<!-- Cierre del controls (el último </div> queda igual abajo) -->
 </div>
 <script>
 const canvas = document.getElementById('game');
