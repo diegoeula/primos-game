@@ -31,6 +31,24 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
 | 11 | Selva de Manzanos | 🍎 5. Manzanal | copas de árboles (caer = muerte) + 🚪 puerta secreta | 🐉 **Dragón** (con fuego) |
 | 12 | Costa Peligrosa | 🏖️ 6. Playa | plataformas flotantes + power-up puñetazo | 🐢 **Tortuga Ninja Mala** |
 | 13 | Metrópolis | 🏙️ 7. Ciudad | autos en movimiento + edificios | 🤖 **Robot** (tira autos + lanzallamas, débil en cabeza y piernas) |
+| 14 | La Bombonera | ⚽ 8. Fútbol | cancha + tribunas | |
+| 15 | Penal Final | ⚽ 8. Fútbol | | 🥅 **Arquero de River** |
+| 16 | Coral Profundo | 🌊 9. Marino | algas + Calamardos | |
+| 17 | Casa Piña | 🌊 9. Marino | | 🧽 **Bob Esponja** |
+| 18 | Plaza Tranquila | 🐕 10. Plaza Perruna | bancos + faroles | |
+| 19 | Furia Perruna | 🐕 10. Plaza Perruna | | 🐺 **Perro Gigante** |
+| 20 | Cinturón de Asteroides | 🚀 11. Espacio | gravedad x0.6 + asteroides | |
+| 21 | Nave Invasora | 🚀 11. Espacio | | 👽 **Alien Verde** |
+| 22 | Bug en la RAM | 💻 12. Computadora | pixel + campo eléctrico | |
+| 23 | El Kernel | 💻 12. Computadora | | 🤖 **Robot Maligno** (glitch propio) |
+| 24 | Pueblo Paleta | 🔴 13. Pokémon | bosque + Squirtles + Blastoise | |
+| 25 | Cueva Charizard | 🔴 13. Pokémon | | 🐉 **Charizard** (cono de fuego) |
+| 26 | Recreo Loco | 🎒 14. Jardín | bloques juguete + mochilas + nenes saltando | |
+| 27 | La Seño Furiosa | 🎒 14. Jardín | | 👩‍🏫 **Maestra** (tira crayones) |
+| 28 | Taller de Juguetes | 🤥 15. Pinocho | madera vieja + caballitos | |
+| 29 | Las Mentiras de Pinocho | 🤥 15. Pinocho | | 🤥 **Pinocho** (nariz extensible) |
+| 30 | Nido en el Árbol | 🦜 16. Ave | árbol + agua nadable + pingüinos + avestruces | |
+| 31 | Cielo del Loro | 🦜 16. Ave | plataformas de nube | 🦜 **Loro** (plumas en abanico) |
 
 ---
 
@@ -79,6 +97,11 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
 - [x] **Fase 18 — Mundo 10 Perro** (N18-N19): plaza + Perro Gigante que embiste + galletas (zanahorias)
 - [x] **Fase 19 — Mundo 11 Espacio** (N20-N21): asteroides + gravedad x0.6 + Alien Verde + triple salto
 - [x] **Fase 20 — Mundo 12 Computadora** (N22-N23): grid digital + campo eléctrico + Robot Maligno + rayos + teleport
+- [x] **Fase 21 — Andamios power-ups M13-16**: timers + maxAirJumps extendido + vuelo libre + agua nadable + coin multiplier + projectile pierce
+- [x] **Fase 22 — Mundo 13 Pokémon** (N24-N25): bosque + Squirtle/Blastoise + Charizard + electricidad/chorro_agua/fuego_pkmn/plata + vidas pokeball
+- [x] **Fase 23 — Mundo 14 Jardín** (N26-N27): aula + Mochila/NeneSaltando + Maestra + cuarto_salto/cinco_saltos/mega_rapido/bola_nieve + vidas crayón
+- [x] **Fase 24 — Mundo 15 Pinocho** (N28-N29): taller + CaballoJuguete + PinochoBoss + torpedo_super/mega_salto/super_pedo + vidas nariz
+- [x] **Fase 25 — Mundo 16 Ave** (N30-N31): cielo+árbol+agua nadable + Avestruz/PinguinoAgua + Loro + submarino/picar/volar + vidas huevo
 
 ---
 

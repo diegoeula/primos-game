@@ -482,10 +482,29 @@ class Player {
     this.torpedoTime = 0;      // torpedo submarino (Mundo 9)
     this.lightningTime = 0;    // rayos eléctricos (Mundo 12)
     this.teleportTime = 0;     // teletransportación corta con ✊ (Mundo 12)
+    // Mundo 13 Pokémon
+    this.electricidadTime = 0; // rayos eléctricos pokemon (Mundo 13)
+    this.chorroAguaTime = 0;   // chorro de agua horizontal (Mundo 13)
+    this.fuegoPkmnTime = 0;    // bola de fuego pokemon (Mundo 13)
+    this.plataTime = 0;        // monedas valen x2 (Mundo 13)
+    // Mundo 14 Jardín
+    this.cuartoSaltoTime = 0;  // 3 saltos aéreos (Mundo 14)
+    this.cincoSaltosTime = 0;  // 4 saltos aéreos (Mundo 14)
+    this.megaRapidoTime = 0;   // velocidad x2.5 (Mundo 14)
+    this.bolaNieveTime = 0;    // proyectil bola de nieve (Mundo 14)
+    // Mundo 15 Pinocho
+    this.torpedoSuperTime = 0; // torpedo rápido que atraviesa (Mundo 15)
+    this.megaJumpReady = false;// próximo salto altísimo (Mundo 15, un uso)
+    this.superPedoTime = 0;    // 3 saltos aéreos (Mundo 15)
+    // Mundo 16 Ave
+    this.submarinoTime = 0;    // inmune a pingüinos del agua (Mundo 16)
+    this.picarTime = 0;        // ataque pico de pájaro (Mundo 16)
+    this.flyTime = 0;          // vuelo libre tipo jetpack (Mundo 16)
     // Power-ups de movilidad
     this.superJumpTime = 0;    // triple salto (Mundo 11)
     this.fartTime = 0;         // pedos = impulso aéreo (Mundo 9)
     this.airJumpsUsed = 0;     // contador de saltos en el aire usados (se resetea al tocar el suelo)
+    this.inWater = false;      // si está dentro de zona water_swim (Mundo 16) — physics cambian
     // Personalización (colores + identidad)
     this.capColor = opts.capColor || '#d32f2f';
     this.shirtColor = opts.shirtColor || '#2d8f3e';
@@ -519,6 +538,22 @@ class Player {
     this.superJumpTime = 0;
     this.fartTime = 0;
     this.airJumpsUsed = 0;
+    // Mundos 13-16
+    this.electricidadTime = 0;
+    this.chorroAguaTime = 0;
+    this.fuegoPkmnTime = 0;
+    this.plataTime = 0;
+    this.cuartoSaltoTime = 0;
+    this.cincoSaltosTime = 0;
+    this.megaRapidoTime = 0;
+    this.bolaNieveTime = 0;
+    this.torpedoSuperTime = 0;
+    this.megaJumpReady = false;
+    this.superPedoTime = 0;
+    this.submarinoTime = 0;
+    this.picarTime = 0;
+    this.flyTime = 0;
+    this.inWater = false;
   }
   update(dt, keys) {
     // Decrementar timers de power-ups
@@ -531,6 +566,20 @@ class Player {
     if (this.teleportTime > 0) this.teleportTime -= dt;
     if (this.superJumpTime > 0) this.superJumpTime -= dt;
     if (this.fartTime > 0) this.fartTime -= dt;
+    // Timers nuevos (Mundos 13-16)
+    if (this.electricidadTime > 0) this.electricidadTime -= dt;
+    if (this.chorroAguaTime > 0) this.chorroAguaTime -= dt;
+    if (this.fuegoPkmnTime > 0) this.fuegoPkmnTime -= dt;
+    if (this.plataTime > 0) this.plataTime -= dt;
+    if (this.cuartoSaltoTime > 0) this.cuartoSaltoTime -= dt;
+    if (this.cincoSaltosTime > 0) this.cincoSaltosTime -= dt;
+    if (this.megaRapidoTime > 0) this.megaRapidoTime -= dt;
+    if (this.bolaNieveTime > 0) this.bolaNieveTime -= dt;
+    if (this.torpedoSuperTime > 0) this.torpedoSuperTime -= dt;
+    if (this.superPedoTime > 0) this.superPedoTime -= dt;
+    if (this.submarinoTime > 0) this.submarinoTime -= dt;
+    if (this.picarTime > 0) this.picarTime -= dt;
+    if (this.flyTime > 0) this.flyTime -= dt;
     if (this.tinyTime > 0) {
       this.tinyTime -= dt;
       if (this.tinyTime <= 0) this.setTiny(false);
@@ -544,9 +593,24 @@ class Player {
     }
     this.groundPlatform = null;
 
-    // Velocidad base (friction del suelo resbaloso es más baja)
+    // Detectar si está dentro de zona water_swim (Mundo 16 Ave) — cambia physics
+    this.inWater = false;
+    if (game.hazards && game.hazards.length) {
+      for (const h of game.hazards) {
+        if (h.type !== 'water_swim') continue;
+        if (this.x < h.x + h.w && this.x + this.w > h.x &&
+            this.y < h.y + h.h && this.y + this.h > h.y) {
+          this.inWater = true;
+          break;
+        }
+      }
+    }
+
+    // Velocidad base (mega_rapido > turbo > base; agua reduce)
     let speed = 4.2;
-    if (this.turboTime > 0) speed *= 1.9;
+    if (this.megaRapidoTime > 0) speed *= 2.5;
+    else if (this.turboTime > 0) speed *= 1.9;
+    if (this.inWater) speed *= 0.7;
     const slippery = this.onGround && this.groundPlatform && (this.groundPlatform.type === 'ice' || this.groundPlatform.slippery);
     const friction = slippery ? 0.96 : 0.75;
 
@@ -554,21 +618,31 @@ class Player {
     else if (keys.right) { this.vx = speed; this.facing = 1; }
     else { this.vx *= friction; if (Math.abs(this.vx) < 0.1 && !slippery) this.vx = 0; }
 
-    // Saltos en el aire permitidos según power-ups activos:
-    //  - feather + fart (mundo marino): 2 saltos extras
-    //  - super_jump (mundo espacio): 2 saltos extras
-    //  - solo feather: 1 salto extra
-    //  - solo fart: 1 salto extra
-    let maxAirJumps = 0;
-    if (this.superJumpTime > 0) maxAirJumps = 2;
-    else if (this.hasFeather && this.fartTime > 0) maxAirJumps = 2;
-    else if (this.hasFeather) maxAirJumps = 1;
-    else if (this.fartTime > 0) maxAirJumps = 1;
+    // Saltos en el aire permitidos según power-ups activos.
+    // Se elige el máximo entre todos los efectos acumulables.
+    const baseAir = this.hasFeather ? 1 : 0;
+    const fartAir = (this.fartTime > 0) ? 1 : 0;
+    const superAir = (this.superJumpTime > 0) ? 2 : 0;
+    const cuartoAir = (this.cuartoSaltoTime > 0) ? 3 : 0;
+    const cincoAir = (this.cincoSaltosTime > 0) ? 4 : 0;
+    const superPedoAir = (this.superPedoTime > 0) ? 3 : 0;
+    let maxAirJumps = Math.max(baseAir + fartAir, superAir, cuartoAir, cincoAir, superPedoAir);
 
-    // Salto desde el suelo o salto extra en el aire
+    // Salto desde el suelo / aire / agua. En agua el salto siempre nada arriba.
     if (keys.jump && !this.jumpConsumed) {
-      if (this.onGround || this.coyote > 0) {
-        this.vy = -12.5;
+      if (this.inWater) {
+        this.vy = -3;
+        this.jumpConsumed = true;
+      } else if (this.onGround || this.coyote > 0) {
+        // Mega salto: próximo salto consume el flag y va altísimo
+        if (this.megaJumpReady) {
+          this.vy = -22;
+          this.megaJumpReady = false;
+          for (let i = 0; i < 18; i++)
+            game.particles.push(new Particle(this.x + this.w/2, this.y + this.h, '#ffd700'));
+        } else {
+          this.vy = -12.5;
+        }
         this.onGround = false;
         this.coyote = 0;
         this.doubleJumpUsed = false;
@@ -580,20 +654,36 @@ class Player {
         this.airJumpsUsed++;
         this.doubleJumpUsed = true; // compat con código existente
         this.jumpConsumed = true;
-        // Partículas según power-up: verdes si pedos, celestes si pluma, blancas si super_jump
-        const color = this.superJumpTime > 0 ? '#ffffff'
-                    : (this.fartTime > 0 ? '#8fc97a' : '#c0e8ff');
+        // Partículas según power-up activo (orden de prioridad visual)
+        let color = '#c0e8ff';
+        if (this.cincoSaltosTime > 0) color = '#ff9bf0';
+        else if (this.cuartoSaltoTime > 0) color = '#ffb060';
+        else if (this.superPedoTime > 0) color = '#7fb060';
+        else if (this.superJumpTime > 0) color = '#ffffff';
+        else if (this.fartTime > 0) color = '#8fc97a';
         for (let i = 0; i < 12; i++)
           game.particles.push(new Particle(this.x + this.w/2, this.y + this.h, color));
       }
     }
     if (!keys.jump) this.jumpConsumed = false;
-    if (!keys.jump && this.vy < -5) this.vy = -5;
+    if (!keys.jump && this.vy < -5 && this.flyTime <= 0) this.vy = -5;
 
-    // Gravedad (con multiplicador por nivel — gravedad baja en Espacio)
+    // Gravedad — modos: vuelo libre / agua / espacio (gMul) / normal
     const gMul = game.gravityMul || 1;
-    this.vy += 0.65 * gMul;
-    if (this.vy > 16 * gMul) this.vy = 16 * gMul;
+    if (this.flyTime > 0) {
+      // Vuelo libre tipo jetpack (Mundo 16)
+      if (keys.jump) this.vy -= 0.5;
+      else if (this.vy > 0) this.vy *= 0.92;
+      else this.vy += 0.05; // muy poca gravedad al subir si soltás
+      this.vy = Math.max(-6, Math.min(6, this.vy));
+    } else if (this.inWater) {
+      this.vy += 0.18;
+      if (this.vy > 4) this.vy = 4;
+      if (this.vy < -6) this.vy = -6;
+    } else {
+      this.vy += 0.65 * gMul;
+      if (this.vy > 16 * gMul) this.vy = 16 * gMul;
+    }
 
     this.x += this.vx;
     this.handleCollisionX();
@@ -602,8 +692,8 @@ class Player {
     this.handleCollisionY();
     if (wasOnGround && !this.onGround) this.coyote = 0.12;
     else this.coyote -= dt;
-    // Reset de saltos en el aire al tocar suelo
-    if (this.onGround) {
+    // Reset de saltos en el aire al tocar suelo o estar en agua
+    if (this.onGround || this.inWater) {
       this.airJumpsUsed = 0;
       this.doubleJumpUsed = false;
     }
@@ -631,6 +721,13 @@ class Player {
         game.projectiles.push(pr);
         this.punchCooldown = 0.4;
         for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#ff6600'));
+      } else if (this.torpedoSuperTime > 0) {
+        // Torpedo SÚPER (Mundo 15) — más rápido y atraviesa enemigos
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 12, 0, 'super_torpedo');
+        pr.friendly = true; pr.owner = this; pr.pierce = true; pr.hitEnemies = new Set();
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.4;
+        for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#a0a0a0'));
       } else if (this.torpedoTime > 0) {
         // Torpedo (mundo Marino)
         const pr = new Projectile(muzzleX, muzzleY, this.facing * 9, 0, 'torpedo_p');
@@ -645,6 +742,42 @@ class Player {
         game.projectiles.push(pr);
         this.punchCooldown = 0.4;
         for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#a0ff60'));
+      } else if (this.electricidadTime > 0) {
+        // Electricidad pokemon (zigzag amarillo)
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 10, 0, 'lightning_pkmn');
+        pr.friendly = true; pr.owner = this;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.4;
+        for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#ffeb00'));
+      } else if (this.chorroAguaTime > 0) {
+        // Chorro de agua horizontal
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 9, 0, 'water_jet');
+        pr.friendly = true; pr.owner = this;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.35;
+        for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#3a9ad6'));
+      } else if (this.fuegoPkmnTime > 0) {
+        // Bola de fuego pokemon (más chica)
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 8, -1, 'pkmn_fire');
+        pr.friendly = true; pr.owner = this;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.4;
+        for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#ff6600'));
+      } else if (this.bolaNieveTime > 0) {
+        // Bola de nieve (Jardín)
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 7, -2, 'snowball');
+        pr.friendly = true; pr.owner = this;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.4;
+        for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#ffffff'));
+      } else if (this.picarTime > 0) {
+        // Picotazo (como puñetazo pero alcance corto + naranja)
+        const hx = this.facing === 1 ? this.x + this.w : this.x - 30;
+        const hy = this.y + 14;
+        game.hitboxes.push({ x: hx, y: hy, w: 30, h: 20, life: 0.2, owner: this });
+        this.punchCooldown = 0.35;
+        for (let i = 0; i < 8; i++)
+          game.particles.push(new Particle(hx + 15, hy + 10, '#ffaa44'));
       } else if (this.teleportTime > 0) {
         // Teletransportación corta ~120px adelante
         const origX = this.x;
@@ -1182,6 +1315,115 @@ class PowerUp {
         // Glow
         ctx.fillStyle = 'rgba(10, 255, 10, 0.3)';
         ctx.fillRect(x + 4, y + 4, 20, 20);
+      } else if (game.world === 'pokemon') {
+        // 🔴 Pokéball (rojo arriba, blanco abajo, banda negra, botón blanco)
+        ctx.save();
+        ctx.translate(x + 14, y + 14);
+        // Mitad roja arriba
+        ctx.fillStyle = '#e3350d';
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, Math.PI, 0, false);
+        ctx.lineTo(12, 0); ctx.lineTo(-12, 0);
+        ctx.closePath(); ctx.fill();
+        // Mitad blanca abajo
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI, false);
+        ctx.closePath(); ctx.fill();
+        // Banda negra horizontal
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-12, -2, 24, 4);
+        // Botón central
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+        // Brillo arriba
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.arc(-4, -7, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (game.world === 'jardin') {
+        // 🖍️ Crayón rojo con punta blanca y banda de papel
+        ctx.save();
+        ctx.translate(x + 14, y + 14);
+        ctx.rotate(-0.3);
+        // Cuerpo del crayón (rojo)
+        ctx.fillStyle = '#d32f2f';
+        ctx.fillRect(-5, -11, 10, 20);
+        // Banda de papel
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-5, -4, 10, 6);
+        ctx.fillStyle = '#9a1a1a';
+        ctx.fillRect(-5, -3, 10, 1);
+        ctx.fillRect(-5, 1, 10, 1);
+        // Punta de cera (cono)
+        ctx.fillStyle = '#ff5050';
+        ctx.beginPath();
+        ctx.moveTo(-5, -11); ctx.lineTo(5, -11); ctx.lineTo(0, -16);
+        ctx.closePath(); ctx.fill();
+        // Punta más oscura (escritura)
+        ctx.fillStyle = '#7a1010';
+        ctx.beginPath();
+        ctx.moveTo(-1, -14); ctx.lineTo(1, -14); ctx.lineTo(0, -16);
+        ctx.closePath(); ctx.fill();
+        // Brillo lateral
+        ctx.fillStyle = '#ff8888';
+        ctx.fillRect(-4, -10, 2, 18);
+        ctx.restore();
+      } else if (game.world === 'pinocho') {
+        // 🤥 Nariz larga marrón con punta
+        ctx.save();
+        ctx.translate(x + 14, y + 14);
+        ctx.rotate(0.15);
+        // Base más gruesa
+        ctx.fillStyle = '#c68a4a';
+        ctx.beginPath();
+        ctx.moveTo(-13, -3); ctx.lineTo(-13, 4);
+        ctx.lineTo(11, 2); ctx.lineTo(11, -1);
+        ctx.closePath(); ctx.fill();
+        // Punta (más oscura, cónica)
+        ctx.fillStyle = '#9a6a30';
+        ctx.beginPath();
+        ctx.moveTo(11, -1); ctx.lineTo(11, 2); ctx.lineTo(14, 0.5);
+        ctx.closePath(); ctx.fill();
+        // Sombra abajo
+        ctx.fillStyle = '#7a4a20';
+        ctx.fillRect(-13, 3, 24, 2);
+        // Anillos de madera
+        ctx.strokeStyle = '#5a3a18';
+        ctx.lineWidth = 1;
+        for (let i = -10; i < 10; i += 5) {
+          ctx.beginPath();
+          ctx.moveTo(i, -3); ctx.lineTo(i, 3);
+          ctx.stroke();
+        }
+        // Brillo en la base
+        ctx.fillStyle = '#e8b070';
+        ctx.fillRect(-12, -2, 4, 2);
+        ctx.restore();
+      } else if (game.world === 'ave') {
+        // 🥚 Huevo blanco con motas marrones
+        ctx.save();
+        ctx.translate(x + 14, y + 14);
+        // Cuerpo del huevo (elipse)
+        ctx.fillStyle = '#fff8e0';
+        ctx.beginPath();
+        ctx.ellipse(0, 1, 9, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Sombra abajo
+        ctx.fillStyle = '#e8dcc0';
+        ctx.beginPath();
+        ctx.ellipse(0, 6, 8, 5, 0, 0, Math.PI);
+        ctx.fill();
+        // Motas marrones
+        ctx.fillStyle = '#8b6139';
+        ctx.beginPath(); ctx.arc(-3, -4, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, 2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-2, 6, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, -3, 1, 0, Math.PI * 2); ctx.fill();
+        // Brillo arriba
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.ellipse(-3, -6, 2, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
       } else {
         // Hongo clásico (otros mundos)
         ctx.fillStyle = '#d3002c'; ctx.fillRect(x + 2, y + 4, 24, 14);
@@ -1419,6 +1661,341 @@ class PowerUp {
         ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
+    } else if (this.type === 'electricidad') {
+      // ⚡ Rayo amarillo brillante (Pokémon)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const flash = Math.sin(this.phase * 8) > 0;
+      ctx.fillStyle = flash ? 'rgba(255, 235, 0, 0.7)' : 'rgba(255, 235, 0, 0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffeb00';
+      ctx.beginPath();
+      ctx.moveTo(-3, -10); ctx.lineTo(4, -2); ctx.lineTo(1, -1);
+      ctx.lineTo(5, 10); ctx.lineTo(-2, 2); ctx.lineTo(2, 1);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-2, -7); ctx.lineTo(2, -2); ctx.lineTo(0, -1);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'chorro_agua') {
+      // 💧 Gota azul (Pokémon Squirtle)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      // Halo
+      ctx.fillStyle = 'rgba(80, 160, 230, 0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      // Gota (lágrima)
+      ctx.fillStyle = '#3a9ad6';
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.bezierCurveTo(8, -2, 8, 8, 0, 10);
+      ctx.bezierCurveTo(-8, 8, -8, -2, 0, -10);
+      ctx.closePath(); ctx.fill();
+      // Brillo
+      ctx.fillStyle = '#88d4ff';
+      ctx.beginPath();
+      ctx.ellipse(-3, -2, 2, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-3, -3, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'fuego_pkmn') {
+      // 🔥 Llama (Pokémon Charmander)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const flick = Math.sin(this.phase * 4) * 1.5;
+      // Halo naranja
+      ctx.fillStyle = 'rgba(255, 100, 0, 0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      // Llama externa roja
+      ctx.fillStyle = '#cc2200';
+      ctx.beginPath();
+      ctx.moveTo(0, -12 - flick);
+      ctx.bezierCurveTo(8, -4, 8, 8, 0, 10);
+      ctx.bezierCurveTo(-8, 8, -8, -4, 0, -12 - flick);
+      ctx.closePath(); ctx.fill();
+      // Llama media naranja
+      ctx.fillStyle = '#ff7700';
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.bezierCurveTo(5, -2, 5, 6, 0, 8);
+      ctx.bezierCurveTo(-5, 6, -5, -2, 0, -8);
+      ctx.closePath(); ctx.fill();
+      // Núcleo amarillo
+      ctx.fillStyle = '#ffeb00';
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 3, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'plata') {
+      // 💰 Moneda plateada brillante (x2)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const shimmer = Math.sin(this.phase * 4) * 0.2 + 1;
+      ctx.scale(shimmer, 1);
+      // Borde plateado
+      ctx.fillStyle = '#a0a0b0';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      // Interior
+      ctx.fillStyle = '#d0d0e0';
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+      // Brillo principal
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-3, -3, 4, 0, Math.PI * 2); ctx.fill();
+      // Texto x2
+      ctx.fillStyle = '#3a3a4a';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('x2', 0, 3);
+      ctx.restore();
+    } else if (this.type === 'cuarto_salto') {
+      // 🦘 4 flechas hacia arriba (jardín)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const bounce = Math.sin(this.phase * 4) * 2;
+      ctx.fillStyle = '#ff8800';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      // 4 flechas hacia arriba
+      for (let i = 0; i < 4; i++) {
+        const yo = -8 + i * 4 + bounce;
+        ctx.beginPath();
+        ctx.moveTo(0, yo); ctx.lineTo(-4, yo + 3); ctx.lineTo(4, yo + 3);
+        ctx.closePath(); ctx.fill();
+      }
+      // "4" decorativo
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('4', 0, 11);
+      ctx.restore();
+    } else if (this.type === 'cinco_saltos') {
+      // 🦘 5 flechas hacia arriba (jardín)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const bounce = Math.sin(this.phase * 4) * 2;
+      ctx.fillStyle = '#ff44aa';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      // 5 flechas hacia arriba
+      for (let i = 0; i < 5; i++) {
+        const yo = -10 + i * 3.5 + bounce;
+        ctx.beginPath();
+        ctx.moveTo(0, yo); ctx.lineTo(-3.5, yo + 2.5); ctx.lineTo(3.5, yo + 2.5);
+        ctx.closePath(); ctx.fill();
+      }
+      // "5" decorativo
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('5', 0, 12);
+      ctx.restore();
+    } else if (this.type === 'mega_rapido') {
+      // 💨💨 Doble flecha de turbo (jardín)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      // Halo amarillo brillante
+      ctx.fillStyle = 'rgba(255, 235, 0, 0.4)';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+      // Doble flecha
+      ctx.fillStyle = '#ff3300';
+      ctx.beginPath();
+      ctx.moveTo(-10, -6); ctx.lineTo(0, 0); ctx.lineTo(-10, 6); ctx.lineTo(-6, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-2, -6); ctx.lineTo(8, 0); ctx.lineTo(-2, 6); ctx.lineTo(2, 0);
+      ctx.closePath(); ctx.fill();
+      // "M" de MEGA
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('M', 8, 11);
+      ctx.restore();
+    } else if (this.type === 'bola_nieve') {
+      // ❄️ Bola de nieve con copo (jardín)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      // Bola
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#c0d8e8';
+      ctx.beginPath(); ctx.arc(3, 3, 6, 0, Math.PI * 2); ctx.fill();
+      // Copo de nieve azul
+      ctx.strokeStyle = '#3a8ad6';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 7, Math.sin(a) * 7);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (this.type === 'torpedo_super') {
+      // 🚀 Torpedo plateado con flecha (pinocho)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      ctx.rotate(Math.sin(this.phase) * 0.08);
+      ctx.fillStyle = '#9090a0';
+      ctx.fillRect(-13, -5, 22, 10);
+      ctx.fillStyle = '#c0c0d0';
+      ctx.fillRect(-13, -5, 22, 4);
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.moveTo(9, -5); ctx.lineTo(14, 0); ctx.lineTo(9, 5);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.fillRect(-14, -7, 3, 14);
+      // Estrella plateada (super)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(0, -2); ctx.lineTo(2, 0); ctx.lineTo(0, 2); ctx.lineTo(-2, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'mega_salto') {
+      // ⬆️ Resorte gigante con M (pinocho)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      // Resorte espiral
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = -8; i <= 8; i += 2) {
+        ctx.moveTo(-5, i); ctx.lineTo(5, i);
+      }
+      ctx.stroke();
+      // Flecha hacia arriba grande
+      ctx.fillStyle = '#d32f2f';
+      ctx.beginPath();
+      ctx.moveTo(0, -12); ctx.lineTo(-6, -4); ctx.lineTo(-2, -4);
+      ctx.lineTo(-2, 6); ctx.lineTo(2, 6); ctx.lineTo(2, -4);
+      ctx.lineTo(6, -4); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'super_pedo') {
+      // 💨 Mega pedo (pinocho) — versión más grande del fart
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#6fa050';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#4a7a30';
+      ctx.beginPath(); ctx.arc(-4, -4, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(5, 3, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#a0d870';
+      ctx.beginPath(); ctx.arc(-5, 4, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#4a7a30'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-8, 10); ctx.lineTo(-5, 14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 11); ctx.lineTo(2, 15); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(7, 10); ctx.lineTo(9, 14); ctx.stroke();
+      // 3 flechas arriba (más fuerte)
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 3; i++) {
+        const yo = -8 + i * 4;
+        ctx.beginPath();
+        ctx.moveTo(0, yo); ctx.lineTo(-3, yo + 2.5); ctx.lineTo(3, yo + 2.5);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    } else if (this.type === 'submarino') {
+      // 🤿 Buzo / burbuja azul (ave - contra pingüinos del agua)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const pulse = 1 + Math.sin(this.phase * 2) * 0.08;
+      ctx.scale(pulse, pulse);
+      // Burbuja externa
+      ctx.fillStyle = 'rgba(100, 200, 255, 0.35)';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      // Casco de buzo
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(-9, -8, 18, 14);
+      ctx.fillStyle = '#88d4ff';
+      ctx.fillRect(-6, -5, 12, 8);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-4, -4, 3, 3);
+      // Tornillos
+      ctx.fillStyle = '#ccaa00';
+      ctx.fillRect(-9, -8, 2, 2);
+      ctx.fillRect(7, -8, 2, 2);
+      ctx.fillRect(-9, 4, 2, 2);
+      ctx.fillRect(7, 4, 2, 2);
+      // Tubo de oxígeno
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(9, -2); ctx.bezierCurveTo(13, 0, 13, 8, 8, 10);
+      ctx.stroke();
+      // Burbujitas
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.arc(-7, 8, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-9, 11, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'picar') {
+      // 🦅 Pico de pájaro (ave)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      ctx.rotate(Math.sin(this.phase) * 0.1);
+      // Halo
+      ctx.fillStyle = 'rgba(255, 180, 60, 0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      // Pico amarillo/naranja (triángulo)
+      ctx.fillStyle = '#ffaa44';
+      ctx.beginPath();
+      ctx.moveTo(-10, -6); ctx.lineTo(12, 0); ctx.lineTo(-10, 6);
+      ctx.closePath(); ctx.fill();
+      // Línea del medio (apertura del pico)
+      ctx.strokeStyle = '#aa6020'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-10, 0); ctx.lineTo(12, 0);
+      ctx.stroke();
+      // Brillo
+      ctx.fillStyle = '#ffd070';
+      ctx.fillRect(-8, -4, 8, 2);
+      // Ojo del pájaro
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-7, -3, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(-7, -3, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'volar') {
+      // 🦅 Alitas blancas con corazón celeste (ave)
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      const flap = Math.sin(this.phase * 6) * 3;
+      // Halo celeste
+      ctx.fillStyle = 'rgba(140, 220, 255, 0.4)';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      // Ala izquierda
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-2, -2);
+      ctx.bezierCurveTo(-10, -8 + flap, -14, -4 + flap, -10, 4);
+      ctx.lineTo(-2, 2);
+      ctx.closePath(); ctx.fill();
+      // Ala derecha
+      ctx.beginPath();
+      ctx.moveTo(2, -2);
+      ctx.bezierCurveTo(10, -8 + flap, 14, -4 + flap, 10, 4);
+      ctx.lineTo(2, 2);
+      ctx.closePath(); ctx.fill();
+      // Detalle plumas
+      ctx.strokeStyle = '#c0d8e8'; ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-4 - i * 2, 0); ctx.lineTo(-10 - i, -2 + flap + i);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(4 + i * 2, 0); ctx.lineTo(10 + i, -2 + flap + i);
+        ctx.stroke();
+      }
+      // Corazón celeste central
+      ctx.fillStyle = '#3a9ad6';
+      ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
   }
 }
@@ -1444,6 +2021,24 @@ function applyPowerUp(type, targetPlayer) {
   else if (type === 'teleport') p.teleportTime = Math.max(p.teleportTime, 15);
   else if (type === 'super_jump') p.superJumpTime = Math.max(p.superJumpTime, 20);
   else if (type === 'fart') p.fartTime = Math.max(p.fartTime, 20);
+  // Mundo 13 Pokémon
+  else if (type === 'electricidad') p.electricidadTime = Math.max(p.electricidadTime, 12);
+  else if (type === 'chorro_agua') p.chorroAguaTime = Math.max(p.chorroAguaTime, 12);
+  else if (type === 'fuego_pkmn') p.fuegoPkmnTime = Math.max(p.fuegoPkmnTime, 12);
+  else if (type === 'plata') p.plataTime = Math.max(p.plataTime, 15);
+  // Mundo 14 Jardín
+  else if (type === 'cuarto_salto') p.cuartoSaltoTime = Math.max(p.cuartoSaltoTime, 20);
+  else if (type === 'cinco_saltos') p.cincoSaltosTime = Math.max(p.cincoSaltosTime, 20);
+  else if (type === 'mega_rapido') p.megaRapidoTime = Math.max(p.megaRapidoTime, 5);
+  else if (type === 'bola_nieve') p.bolaNieveTime = Math.max(p.bolaNieveTime, 12);
+  // Mundo 15 Pinocho
+  else if (type === 'torpedo_super') p.torpedoSuperTime = Math.max(p.torpedoSuperTime, 12);
+  else if (type === 'mega_salto') p.megaJumpReady = true;
+  else if (type === 'super_pedo') p.superPedoTime = Math.max(p.superPedoTime, 20);
+  // Mundo 16 Ave
+  else if (type === 'submarino') p.submarinoTime = Math.max(p.submarinoTime, 15);
+  else if (type === 'picar') p.picarTime = Math.max(p.picarTime, 12);
+  else if (type === 'volar') p.flyTime = Math.max(p.flyTime, 8);
 }
 
 // ============ PROJECTILE (bolas de nieve, rocas de hielo, fuego) ============
@@ -1462,12 +2057,26 @@ class Projectile {
     // Gravedad por tipo
     if (this.type === 'car_proj') this.vy += 0.32;
     else if (this.type === 'fire' || this.type === 'shuriken') this.vy += 0;
-    else if (this.type === 'ball' || this.type === 'krabby') this.vy += 0.28;
-    else if (this.type === 'laser' || this.type === 'byte' || this.type === 'lightning_bolt' || this.type === 'fireball_p' || this.type === 'torpedo_p') this.vy += 0;
+    else if (this.type === 'ball' || this.type === 'krabby' || this.type === 'crayon') this.vy += 0.28;
+    else if (this.type === 'laser' || this.type === 'byte' || this.type === 'lightning_bolt' ||
+             this.type === 'fireball_p' || this.type === 'torpedo_p' ||
+             this.type === 'lightning_pkmn' || this.type === 'water_jet' ||
+             this.type === 'flame_breath' || this.type === 'nose' ||
+             this.type === 'super_torpedo' || this.type === 'feather_proj') this.vy += 0;
+    else if (this.type === 'pkmn_fire' || this.type === 'snowball') this.vy += 0.18;
     else this.vy += 0.25;
-    // Movimiento zigzag para el rayo del player
-    if (this.type === 'lightning_bolt') {
+    // Movimientos especiales por tipo
+    if (this.type === 'lightning_bolt' || this.type === 'lightning_pkmn') {
       this.vy = Math.sin(this.spin * 4) * 4;
+    }
+    if (this.type === 'feather_proj') {
+      // Drift descendente con ondulación
+      this.vy = 1.5 + Math.sin(this.spin * 3) * 1.2;
+    }
+    if (this.type === 'flame_breath') {
+      // Crece a medida que avanza
+      if (this.w < 40) this.w += 0.8;
+      if (this.h < 30) this.h += 0.5;
     }
     this.life -= dt;
     this.spin += dt * (this.type === 'shuriken' ? 18 : (this.type === 'ball' ? 10 : 8));
@@ -1635,6 +2244,193 @@ class Projectile {
       const dirT = this.vx >= 0 ? -1 : 1;
       ctx.beginPath(); ctx.arc(x + 7 + dirT * 8, y + 4, 2, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(x + 7 + dirT * 12, y + 9, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else if (this.type === 'lightning_pkmn') {
+      // Rayo eléctrico amarillo zigzag (Pikachu-ish)
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#ffeb00';
+      ctx.fillRect(x - 4, y + 4, 20, 6);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(x, y + 5);
+      ctx.lineTo(x + 5, y + 2);
+      ctx.lineTo(x + 6, y + 6);
+      ctx.lineTo(x + 12, y + 4);
+      ctx.lineTo(x + 14, y + 7);
+      ctx.lineTo(x + 9, y + 10);
+      ctx.lineTo(x + 7, y + 8);
+      ctx.closePath();
+      ctx.fill();
+      // Borde amarillo
+      ctx.strokeStyle = '#ffaa00';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.type === 'water_jet') {
+      // Chorro de agua horizontal (Squirtle-style)
+      ctx.save();
+      const dir = this.vx >= 0 ? 1 : -1;
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = '#88d4ff';
+      ctx.fillRect(x - 6 * dir, y + 3, 24, 8);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#3a9ad6';
+      ctx.fillRect(x, y + 4, 16, 6);
+      ctx.fillStyle = '#88d4ff';
+      ctx.fillRect(x + 2, y + 4, 12, 2);
+      // Cabeza redonda (gota)
+      ctx.fillStyle = '#3a9ad6';
+      ctx.beginPath();
+      ctx.arc(x + (dir > 0 ? 14 : 2), y + 7, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x + (dir > 0 ? 13 : 3), y + 5, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'pkmn_fire') {
+      // Bola de fuego pequeña pokemon
+      ctx.fillStyle = '#cc2200';
+      ctx.beginPath(); ctx.arc(x + 7, y + 7, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff7700';
+      ctx.beginPath(); ctx.arc(x + 7, y + 7, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffeb00';
+      ctx.beginPath(); ctx.arc(x + 7, y + 7, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(x + 6, y + 6, 1, 0, Math.PI * 2); ctx.fill();
+    } else if (this.type === 'flame_breath') {
+      // Cono de fuego (Charizard) — más ancho a medida que avanza
+      const w = this.w || 20;
+      const h = this.h || 14;
+      ctx.save();
+      const dir = this.vx >= 0 ? 1 : -1;
+      ctx.translate(x + w / 2, y + h / 2);
+      ctx.scale(dir, 1);
+      // Capa externa roja
+      ctx.fillStyle = 'rgba(220, 40, 0, 0.5)';
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2);
+      ctx.lineTo(w / 2, -h / 4);
+      ctx.lineTo(w / 2, h / 4);
+      ctx.lineTo(-w / 2, h / 2);
+      ctx.closePath(); ctx.fill();
+      // Capa naranja
+      ctx.fillStyle = '#ff7700';
+      ctx.beginPath();
+      ctx.moveTo(-w / 2 + 2, -h / 2 + 2);
+      ctx.lineTo(w / 2 - 4, -h / 4 + 2);
+      ctx.lineTo(w / 2 - 4, h / 4 - 2);
+      ctx.lineTo(-w / 2 + 2, h / 2 - 2);
+      ctx.closePath(); ctx.fill();
+      // Núcleo amarillo
+      ctx.fillStyle = '#ffeb00';
+      ctx.beginPath();
+      ctx.ellipse(-w / 4, 0, w / 4, h / 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'crayon') {
+      // Crayón rotando (Maestra)
+      ctx.save();
+      ctx.translate(x + 7, y + 7);
+      ctx.rotate(this.spin);
+      // Cuerpo
+      ctx.fillStyle = '#2d8f3e';
+      ctx.fillRect(-3, -10, 6, 16);
+      // Banda blanca
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-3, -2, 6, 4);
+      // Punta
+      ctx.fillStyle = '#5fc060';
+      ctx.beginPath();
+      ctx.moveTo(-3, -10); ctx.lineTo(3, -10); ctx.lineTo(0, -14);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'nose') {
+      // Nariz de Pinocho (proyectil largo recto)
+      ctx.save();
+      const dir = this.vx >= 0 ? 1 : -1;
+      ctx.translate(x + 7, y + 7);
+      ctx.scale(dir, 1);
+      ctx.fillStyle = '#c68a4a';
+      ctx.fillRect(-14, -3, 26, 6);
+      ctx.fillStyle = '#9a6a30';
+      ctx.beginPath();
+      ctx.moveTo(12, -3); ctx.lineTo(16, 0); ctx.lineTo(12, 3);
+      ctx.closePath(); ctx.fill();
+      // Anillos
+      ctx.strokeStyle = '#7a4a20';
+      ctx.lineWidth = 1;
+      for (let i = -10; i < 10; i += 5) {
+        ctx.beginPath();
+        ctx.moveTo(i, -3); ctx.lineTo(i, 3);
+        ctx.stroke();
+      }
+      // Brillo arriba
+      ctx.fillStyle = '#e8b070';
+      ctx.fillRect(-12, -2, 20, 1);
+      ctx.restore();
+    } else if (this.type === 'feather_proj') {
+      // Pluma puntiaguda (Loro)
+      ctx.save();
+      ctx.translate(x + 7, y + 7);
+      ctx.rotate(this.spin * 0.5);
+      // Astil
+      ctx.fillStyle = '#aa3030';
+      ctx.fillRect(-1, -8, 2, 16);
+      // Barbas amarillas
+      ctx.fillStyle = '#ffeb00';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Manchas verdes/rojas (loro)
+      ctx.fillStyle = '#3a9c2e';
+      ctx.beginPath();
+      ctx.ellipse(0, -4, 4, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#cc2200';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Punta filosa
+      ctx.fillStyle = '#aa3030';
+      ctx.beginPath();
+      ctx.moveTo(-2, 8); ctx.lineTo(0, 12); ctx.lineTo(2, 8);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'super_torpedo') {
+      // Super torpedo plateado (pierce)
+      ctx.save();
+      const dir = this.vx >= 0 ? 1 : -1;
+      ctx.translate(x + 7, y + 7);
+      ctx.scale(dir, 1);
+      // Halo eléctrico
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(-12, -5, 22, 10);
+      ctx.globalAlpha = 1;
+      // Cuerpo plateado
+      ctx.fillStyle = '#a0a0b0';
+      ctx.fillRect(-10, -4, 18, 8);
+      ctx.fillStyle = '#d0d0e0';
+      ctx.fillRect(-10, -4, 18, 3);
+      // Punta dorada
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.moveTo(8, -4); ctx.lineTo(13, 0); ctx.lineTo(8, 4);
+      ctx.closePath(); ctx.fill();
+      // Aleta
+      ctx.fillStyle = '#333';
+      ctx.fillRect(-11, -6, 3, 12);
+      // Estrella en el medio
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-2, -1, 4, 2);
+      ctx.restore();
+      // Estela
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+      const dirS = this.vx >= 0 ? -1 : 1;
+      ctx.beginPath(); ctx.arc(x + 7 + dirS * 10, y + 4, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 7 + dirS * 14, y + 9, 1.5, 0, Math.PI * 2); ctx.fill();
     }
   }
 }
@@ -3079,6 +3875,1139 @@ class EvilRobot {
   }
 }
 
+// ============ SQUIRTLE (enemigo común — Mundo 13 Pokémon) ============
+class Squirtle {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 32; this.h = 28;
+    this.startX = x;
+    this.range = range || 90;
+    this.vx = -1.2;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.18;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Caparazón azul
+    ctx.fillStyle = '#3a7ad6';
+    ctx.fillRect(lx + 4, y + 6, 24, 18);
+    ctx.fillStyle = '#2a5aa6';
+    ctx.fillRect(lx + 4, y + 18, 24, 6);
+    // Bordes del caparazón
+    ctx.fillStyle = '#1a3a76';
+    ctx.fillRect(lx + 4, y + 6, 24, 2);
+    // Patrón hexagonal del caparazón
+    ctx.fillStyle = '#88c0f0';
+    ctx.fillRect(lx + 9, y + 10, 4, 4);
+    ctx.fillRect(lx + 19, y + 10, 4, 4);
+    ctx.fillRect(lx + 14, y + 14, 4, 4);
+    // Cara amarillenta
+    ctx.fillStyle = '#f0d090';
+    ctx.fillRect(lx + 1, y + 8, 8, 10);
+    // Ojo
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 2, y + 10, 3, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 3, y + 11, 2, 2);
+    // Boca
+    ctx.fillStyle = '#aa6020';
+    ctx.fillRect(lx + 2, y + 15, 4, 1);
+    // Cola enroscada
+    ctx.fillStyle = '#f0d090';
+    ctx.fillRect(lx + 28, y + 14, 4, 4);
+    // Patitas
+    const lp = Math.sin(this.walkFrame) * 1.5;
+    ctx.fillStyle = '#f0d090';
+    ctx.fillRect(lx + 6, y + 22, 5, 4 + lp);
+    ctx.fillRect(lx + 18, y + 22, 5, 4 - lp);
+    ctx.restore();
+  }
+}
+
+// ============ BLASTOISE (enemigo común — Mundo 13 Pokémon) ============
+class Blastoise {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 52; this.h = 44;
+    this.startX = x;
+    this.range = range || 100;
+    this.vx = -0.9;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 2;
+    this.invuln = 0;
+    this.fireTimer = 2 + Math.random() * 1.5;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.15;
+    // Dispara chorro de agua cada 3s
+    this.fireTimer -= dt;
+    if (this.fireTimer <= 0) {
+      this.fireTimer = 3;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const dir = (target.x > this.x) ? 1 : -1;
+        const pr = new Projectile(this.x + this.w / 2, this.y + 14, dir * 5, 0, 'water_jet');
+        pr.life = 2.5;
+        game.projectiles.push(pr);
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Caparazón grande azul oscuro
+    ctx.fillStyle = '#2a5aa6';
+    ctx.fillRect(lx + 8, y + 8, 38, 30);
+    ctx.fillStyle = '#1a3a76';
+    ctx.fillRect(lx + 8, y + 28, 38, 10);
+    ctx.fillStyle = '#0a2a60';
+    ctx.fillRect(lx + 8, y + 8, 38, 3);
+    // Patrón hexagonal
+    ctx.fillStyle = '#5a9ad6';
+    ctx.fillRect(lx + 14, y + 14, 6, 6);
+    ctx.fillRect(lx + 32, y + 14, 6, 6);
+    ctx.fillRect(lx + 22, y + 20, 8, 6);
+    // Cañones en el lomo (los 2 cañones de agua de Blastoise)
+    ctx.fillStyle = '#888';
+    ctx.fillRect(lx + 10, y + 4, 8, 10);
+    ctx.fillRect(lx + 36, y + 4, 8, 10);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(lx + 12, y + 2, 4, 6);
+    ctx.fillRect(lx + 38, y + 2, 4, 6);
+    // Cara
+    ctx.fillStyle = '#a07050';
+    ctx.fillRect(lx + 2, y + 14, 10, 14);
+    // Ojos
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 3, y + 17, 3, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 4, y + 18, 2, 2);
+    // Boca
+    ctx.fillStyle = '#3a1a05';
+    ctx.fillRect(lx + 2, y + 24, 5, 2);
+    // Patas grandes
+    const lp = Math.sin(this.walkFrame) * 2;
+    ctx.fillStyle = '#a07050';
+    ctx.fillRect(lx + 12, y + 36, 10, 8 + lp);
+    ctx.fillRect(lx + 30, y + 36, 10, 8 - lp);
+    ctx.restore();
+  }
+}
+
+// ============ CHARIZARD (jefe — Mundo 13 Pokémon) ============
+class Charizard {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 90; this.h = 70;
+    this.baseY = y;
+    this.startX = x;
+    this.range = range || 220;
+    this.vx = -1.4;
+    this.phase = Math.random() * Math.PI * 2;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 5;
+    this.maxHp = 5;
+    this.invuln = 0;
+    this.isBoss = true;
+    this.fireTimer = 2;
+    this.telegraphTime = 0; // > 0 = avisa que va a tirar fuego
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 4; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phase += dt * 2.5;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Vuela en arco (sine)
+    this.y = this.baseY + Math.sin(this.phase) * 30;
+    // Dispara llamarada cada 3s, con telegraphTime 0.5s antes
+    this.fireTimer -= dt;
+    if (this.telegraphTime > 0) this.telegraphTime -= dt;
+    if (this.fireTimer <= 0.5 && this.telegraphTime <= 0 && this.fireTimer > 0) {
+      this.telegraphTime = 0.5;
+    }
+    if (this.fireTimer <= 0) {
+      this.fireTimer = 3;
+      this.telegraphTime = 0;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const dir = (target.x > this.x) ? 1 : -1;
+        const pr = new Projectile(this.x + this.w / 2, this.y + this.h / 2, dir * 4, 0, 'flame_breath');
+        pr.w = 24; pr.h = 18;
+        pr.life = 1.5;
+        game.projectiles.push(pr);
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // Barra de HP
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#ff6633' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 16, y - 14, 12, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 16, y - 14, 12, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Alas (animadas con flap)
+    const flap = Math.sin(this.phase * 4) * 8;
+    ctx.fillStyle = '#3a6a5a';
+    ctx.beginPath();
+    ctx.moveTo(lx + 30, y + 20);
+    ctx.bezierCurveTo(lx + 5, y - 5 + flap, lx - 10, y + 20 + flap, lx + 20, y + 35);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a6a5a';
+    ctx.beginPath();
+    ctx.moveTo(lx + 60, y + 20);
+    ctx.bezierCurveTo(lx + 85, y - 5 + flap, lx + 100, y + 20 + flap, lx + 70, y + 35);
+    ctx.closePath(); ctx.fill();
+    // Membrana interna naranja
+    ctx.fillStyle = '#cc6020';
+    ctx.beginPath();
+    ctx.moveTo(lx + 30, y + 22);
+    ctx.bezierCurveTo(lx + 15, y + 5 + flap, lx + 5, y + 22 + flap, lx + 25, y + 32);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + 60, y + 22);
+    ctx.bezierCurveTo(lx + 75, y + 5 + flap, lx + 85, y + 22 + flap, lx + 65, y + 32);
+    ctx.closePath(); ctx.fill();
+    // Cuerpo naranja
+    ctx.fillStyle = '#ff8c00';
+    ctx.fillRect(lx + 25, y + 15, 40, 40);
+    ctx.fillStyle = '#cc6020';
+    ctx.fillRect(lx + 25, y + 45, 40, 10);
+    // Panza beige
+    ctx.fillStyle = '#f0d090';
+    ctx.fillRect(lx + 30, y + 28, 30, 22);
+    // Cabeza
+    ctx.fillStyle = '#ff8c00';
+    ctx.fillRect(lx + 15, y, 36, 26);
+    ctx.fillStyle = '#cc6020';
+    ctx.fillRect(lx + 15, y + 20, 36, 6);
+    // Cuernos
+    ctx.fillStyle = '#f0d090';
+    ctx.beginPath();
+    ctx.moveTo(lx + 18, y); ctx.lineTo(lx + 14, y - 12); ctx.lineTo(lx + 22, y - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + 44, y); ctx.lineTo(lx + 48, y - 12); ctx.lineTo(lx + 40, y - 2);
+    ctx.closePath(); ctx.fill();
+    // Ojos
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 24, y + 8, 5, 6);
+    ctx.fillRect(lx + 36, y + 8, 5, 6);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 25, y + 10, 3, 3);
+    ctx.fillRect(lx + 37, y + 10, 3, 3);
+    // Boca (abierta si telegrafiando fuego)
+    if (this.telegraphTime > 0) {
+      ctx.fillStyle = '#ff3300';
+      ctx.fillRect(lx + 8, y + 16, 12, 8);
+      ctx.fillStyle = '#ffeb00';
+      ctx.fillRect(lx + 10, y + 18, 8, 4);
+    } else {
+      ctx.fillStyle = '#3a1a05';
+      ctx.fillRect(lx + 8, y + 18, 8, 3);
+    }
+    // Dientes blancos
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 9, y + 18, 1, 2);
+    ctx.fillRect(lx + 15, y + 18, 1, 2);
+    // Cola con fuego
+    ctx.fillStyle = '#ff8c00';
+    ctx.fillRect(lx + 60, y + 40, 22, 10);
+    ctx.fillRect(lx + 75, y + 45, 12, 18);
+    // Llama de la cola
+    const flick = Math.sin(this.phase * 6) * 2;
+    ctx.fillStyle = '#ff3300';
+    ctx.beginPath();
+    ctx.arc(lx + 82, y + 50 + flick, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffeb00';
+    ctx.beginPath();
+    ctx.arc(lx + 82, y + 50 + flick, 4, 0, Math.PI * 2); ctx.fill();
+    // Patas
+    ctx.fillStyle = '#ff8c00';
+    ctx.fillRect(lx + 28, y + 55, 10, 12);
+    ctx.fillRect(lx + 52, y + 55, 10, 12);
+    ctx.fillStyle = '#cc6020';
+    ctx.fillRect(lx + 28, y + 64, 10, 3);
+    ctx.fillRect(lx + 52, y + 64, 10, 3);
+    ctx.restore();
+  }
+}
+
+// ============ MOCHILA (enemigo común — Mundo 14 Jardín) ============
+class Mochila {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 28; this.h = 32;
+    this.startX = x;
+    this.range = range || 80;
+    this.vx = -1.1;
+    this.baseY = y;
+    this.phase = Math.random() * Math.PI * 2;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+    // Color al azar (rosa/azul/verde/naranja)
+    const cols = ['#ff80c0', '#3a9ad6', '#5fc060', '#ffaa44'];
+    this.color = cols[Math.floor((x / 60) % cols.length + cols.length) % cols.length];
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phase += dt * 6;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Saltitos chicos
+    this.y = this.baseY - Math.max(0, Math.sin(this.phase)) * 6;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    // Cuerpo principal de la mochila
+    ctx.fillStyle = this.color;
+    ctx.fillRect(x + 2, y + 4, 24, 26);
+    // Sombra abajo
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x + 2, y + 24, 24, 6);
+    // Bolsillo frontal
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 8, y + 16, 12, 10);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 8, y + 16, 12, 10);
+    // Cara enojada
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 11, y + 19, 2, 2);
+    ctx.fillRect(x + 17, y + 19, 2, 2);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 11, y + 24); ctx.lineTo(x + 14, y + 22); ctx.lineTo(x + 17, y + 24);
+    ctx.stroke();
+    // Correas arriba
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x + 8, y, 3, 8);
+    ctx.fillRect(x + 17, y, 3, 8);
+    // Asa arriba
+    ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + 14, y + 2, 7, Math.PI, 0);
+    ctx.stroke();
+    // Cierre central
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 13, y + 6, 2, 22);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 13, y + 26, 2, 4);
+    ctx.restore();
+  }
+}
+
+// ============ NENE SALTANDO (enemigo común — Mundo 14 Jardín) ============
+class NeneSaltando {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.w = 26; this.h = 36;
+    this.baseY = y;
+    this.vy = 0;
+    this.timer = Math.random() * 1.5;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+    this.shirtColor = ['#ff3300', '#3a9ad6', '#ffd700'][Math.floor((Math.abs(x) / 80) % 3)];
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.timer -= dt;
+    if (this.timer <= 0 && this.y >= this.baseY - 1) {
+      this.vy = -10;
+      this.timer = 1.5;
+    }
+    this.vy += 0.55;
+    this.y += this.vy;
+    if (this.y >= this.baseY) {
+      this.y = this.baseY;
+      this.vy = 0;
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    // Pelo marrón
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(x + 4, y, 18, 10);
+    // Cabeza
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(x + 6, y + 4, 14, 12);
+    // Ojos
+    const opens = this.vy < -2;
+    if (opens) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 9, y + 8, 3, 3);
+      ctx.fillRect(x + 15, y + 8, 3, 3);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 10, y + 9, 2, 2);
+      ctx.fillRect(x + 16, y + 9, 2, 2);
+    } else {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 9, y + 9, 3, 1);
+      ctx.fillRect(x + 15, y + 9, 3, 1);
+    }
+    // Boca sonriente
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 11, y + 13, 4, 1);
+    // Cuerpo (remera)
+    ctx.fillStyle = this.shirtColor;
+    ctx.fillRect(x + 4, y + 16, 18, 12);
+    // Brazos arriba si salta
+    ctx.fillStyle = '#ffcc99';
+    if (opens) {
+      ctx.fillRect(x, y + 12, 4, 12);
+      ctx.fillRect(x + 22, y + 12, 4, 12);
+    } else {
+      ctx.fillRect(x, y + 18, 4, 10);
+      ctx.fillRect(x + 22, y + 18, 4, 10);
+    }
+    // Pantalón corto azul
+    ctx.fillStyle = '#1a4d7a';
+    ctx.fillRect(x + 4, y + 28, 18, 5);
+    // Piernas
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(x + 6, y + 33, 4, 3);
+    ctx.fillRect(x + 16, y + 33, 4, 3);
+    ctx.restore();
+  }
+}
+
+// ============ MAESTRA (jefe — Mundo 14 Jardín) ============
+class Maestra {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 36; this.h = 64;
+    this.startX = x;
+    this.range = range || 180;
+    this.vx = -1.0;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 4;
+    this.maxHp = 4;
+    this.invuln = 0;
+    this.isBoss = true;
+    this.shootTimer = 2;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.15;
+    // Tira crayones cada 2s
+    this.shootTimer -= dt;
+    if (this.shootTimer <= 0) {
+      this.shootTimer = 2;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const sp = 6;
+        const pr = new Projectile(this.x + this.w / 2, this.y + 20, (dx / dist) * sp, (dy / dist) * sp - 2, 'crayon');
+        pr.life = 3;
+        game.projectiles.push(pr);
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // HP bar
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#aa3399' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 10, y - 14, 7, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 10, y - 14, 7, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Rodete arriba
+    ctx.fillStyle = '#3a1a05';
+    ctx.beginPath(); ctx.arc(lx + 18, y - 3, 8, 0, Math.PI * 2); ctx.fill();
+    // Cabeza
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(lx + 8, y + 2, 20, 16);
+    // Pelo lateral
+    ctx.fillStyle = '#3a1a05';
+    ctx.fillRect(lx + 6, y + 2, 4, 14);
+    ctx.fillRect(lx + 26, y + 2, 4, 14);
+    // Gafas
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(lx + 10, y + 8, 6, 5);
+    ctx.strokeRect(lx + 20, y + 8, 6, 5);
+    ctx.beginPath();
+    ctx.moveTo(lx + 16, y + 10); ctx.lineTo(lx + 20, y + 10);
+    ctx.stroke();
+    // Ojos detrás de gafas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 12, y + 10, 2, 2);
+    ctx.fillRect(lx + 22, y + 10, 2, 2);
+    // Ceño enojado
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(lx + 10, y + 6); ctx.lineTo(lx + 16, y + 8);
+    ctx.moveTo(lx + 26, y + 6); ctx.lineTo(lx + 20, y + 8);
+    ctx.stroke();
+    // Boca seria
+    ctx.fillStyle = '#aa3030';
+    ctx.fillRect(lx + 14, y + 16, 8, 2);
+    // Cuello
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(lx + 14, y + 18, 8, 4);
+    // Vestido violeta
+    ctx.fillStyle = '#aa3399';
+    ctx.fillRect(lx + 6, y + 22, 24, 30);
+    ctx.fillStyle = '#cc55aa';
+    ctx.fillRect(lx + 6, y + 22, 24, 4);
+    // Cinturón
+    ctx.fillStyle = '#3a1a4a';
+    ctx.fillRect(lx + 6, y + 36, 24, 4);
+    // Botón
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(lx + 18, y + 26, 2, 0, Math.PI * 2); ctx.fill();
+    // Brazos
+    ctx.fillStyle = '#ffcc99';
+    ctx.fillRect(lx, y + 24, 6, 18);
+    ctx.fillRect(lx + 30, y + 24, 6, 18);
+    // Crayón en la mano apuntando hacia adelante
+    ctx.fillStyle = '#2d8f3e';
+    ctx.fillRect(lx + 30, y + 26, 14, 4);
+    ctx.fillStyle = '#5fc060';
+    ctx.beginPath();
+    ctx.moveTo(lx + 44, y + 26); ctx.lineTo(lx + 48, y + 28); ctx.lineTo(lx + 44, y + 30);
+    ctx.closePath(); ctx.fill();
+    // Piernas con animación
+    const lp = Math.sin(this.walkFrame) * 2;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(lx + 10, y + 52, 6, 10 + lp);
+    ctx.fillRect(lx + 20, y + 52, 6, 10 - lp);
+    // Zapatos negros
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 8, y + 60, 10, 4);
+    ctx.fillRect(lx + 18, y + 60, 10, 4);
+    ctx.restore();
+  }
+}
+
+// ============ CABALLO JUGUETE (enemigo común — Mundo 15 Pinocho) ============
+class CaballoJuguete {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 36; this.h = 28;
+    this.startX = x;
+    this.range = range || 100;
+    this.vx = -1.3;
+    this.baseY = y;
+    this.phase = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phase += dt * 8;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Rebote tipo resorte
+    this.y = this.baseY - Math.max(0, Math.sin(this.phase)) * 5;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Ruedas
+    ctx.fillStyle = '#3a1a05';
+    ctx.beginPath(); ctx.arc(lx + 8, y + 24, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lx + 28, y + 24, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.beginPath(); ctx.arc(lx + 8, y + 24, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lx + 28, y + 24, 2, 0, Math.PI * 2); ctx.fill();
+    // Cuerpo madera
+    ctx.fillStyle = '#a07050';
+    ctx.fillRect(lx + 4, y + 14, 28, 10);
+    ctx.fillStyle = '#7a4a30';
+    ctx.fillRect(lx + 4, y + 22, 28, 2);
+    // Vetas
+    ctx.strokeStyle = '#5a3010'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lx + 4, y + 18); ctx.lineTo(lx + 32, y + 18);
+    ctx.stroke();
+    // Cabeza de caballo (al frente)
+    ctx.fillStyle = '#a07050';
+    ctx.beginPath();
+    ctx.moveTo(lx, y + 18); ctx.lineTo(lx - 4, y + 12);
+    ctx.lineTo(lx - 4, y + 4); ctx.lineTo(lx + 6, y + 4);
+    ctx.lineTo(lx + 10, y + 14); ctx.closePath(); ctx.fill();
+    // Crin roja
+    ctx.fillStyle = '#cc2200';
+    ctx.fillRect(lx + 6, y, 8, 8);
+    ctx.fillRect(lx + 8, y - 2, 4, 4);
+    // Ojo
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx, y + 8, 2, 2);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx, y + 9, 1, 1);
+    // Boca/morro
+    ctx.fillStyle = '#7a3a18';
+    ctx.fillRect(lx - 4, y + 10, 4, 3);
+    // Cola atrás
+    ctx.fillStyle = '#cc2200';
+    ctx.fillRect(lx + 32, y + 8, 4, 14);
+    ctx.fillRect(lx + 34, y + 8, 4, 8);
+    // Resorte (decorativo entre cuerpo y ruedas)
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      ctx.moveTo(lx + 10, y + 18 + i * 2);
+      ctx.lineTo(lx + 26, y + 18 + i * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ============ PINOCHO BOSS (jefe — Mundo 15 Pinocho) ============
+class PinochoBoss {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 38; this.h = 64;
+    this.startX = x;
+    this.range = range || 150;
+    this.vx = -0.9;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 4;
+    this.maxHp = 4;
+    this.invuln = 0;
+    this.isBoss = true;
+    this.lyingTimer = 2.5;
+    this.noseGrowing = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.15;
+    // Cada 3s "miente" y dispara su nariz extensible
+    this.lyingTimer -= dt;
+    if (this.lyingTimer <= 0.8 && this.lyingTimer > 0) {
+      this.noseGrowing = Math.min(1, this.noseGrowing + dt * 1.5);
+    }
+    if (this.lyingTimer <= 0) {
+      this.lyingTimer = 3;
+      this.noseGrowing = 0;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const dir = (target.x > this.x) ? 1 : -1;
+        const pr = new Projectile(this.x + this.w / 2, this.y + 22, dir * 8, 0, 'nose');
+        pr.life = 1.8;
+        game.projectiles.push(pr);
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // HP bar
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#c68a4a' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 10, y - 14, 7, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 10, y - 14, 7, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Sombrero verde con pluma
+    ctx.fillStyle = '#3a8c2e';
+    ctx.fillRect(lx + 6, y, 26, 5);
+    ctx.fillStyle = '#5fc060';
+    ctx.beginPath();
+    ctx.moveTo(lx + 10, y + 2); ctx.lineTo(lx + 28, y + 2); ctx.lineTo(lx + 19, y - 8);
+    ctx.closePath(); ctx.fill();
+    // Pluma roja
+    ctx.fillStyle = '#cc2200';
+    ctx.fillRect(lx + 18, y - 10, 2, 8);
+    // Cabeza madera
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 8, y + 5, 22, 22);
+    // Pelo
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(lx + 4, y + 8, 4, 10);
+    ctx.fillRect(lx + 30, y + 8, 4, 10);
+    // Ojos
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 12, y + 12, 5, 5);
+    ctx.fillRect(lx + 22, y + 12, 5, 5);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 14, y + 14, 2, 2);
+    ctx.fillRect(lx + 24, y + 14, 2, 2);
+    // Sonrisa pícara
+    ctx.fillStyle = '#aa3030';
+    ctx.fillRect(lx + 13, y + 22, 12, 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 14, y + 22, 2, 1);
+    ctx.fillRect(lx + 22, y + 22, 2, 1);
+    // Nariz que crece según noseGrowing
+    const noseLen = 10 + Math.floor(this.noseGrowing * 30);
+    ctx.fillStyle = '#c68a4a';
+    ctx.fillRect(lx + 28, y + 18, noseLen, 4);
+    ctx.fillStyle = '#9a6a30';
+    ctx.beginPath();
+    ctx.moveTo(lx + 28 + noseLen, y + 18); ctx.lineTo(lx + 32 + noseLen, y + 20); ctx.lineTo(lx + 28 + noseLen, y + 22);
+    ctx.closePath(); ctx.fill();
+    // Anillos en la nariz
+    ctx.strokeStyle = '#7a4a20'; ctx.lineWidth = 1;
+    for (let i = 5; i < noseLen; i += 6) {
+      ctx.beginPath();
+      ctx.moveTo(lx + 28 + i, y + 18); ctx.lineTo(lx + 28 + i, y + 22);
+      ctx.stroke();
+    }
+    // Cuello
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 16, y + 27, 6, 4);
+    // Cuerpo (chaqueta amarilla con botones)
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(lx + 6, y + 31, 26, 18);
+    ctx.fillStyle = '#cc9900';
+    ctx.fillRect(lx + 6, y + 47, 26, 2);
+    // Botones
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(lx + 19, y + 36, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lx + 19, y + 43, 2, 0, Math.PI * 2); ctx.fill();
+    // Pantalón corto rojo
+    ctx.fillStyle = '#cc2200';
+    ctx.fillRect(lx + 6, y + 49, 26, 8);
+    // Tirantes
+    ctx.fillStyle = '#1a1a4a';
+    ctx.fillRect(lx + 10, y + 31, 2, 18);
+    ctx.fillRect(lx + 26, y + 31, 2, 18);
+    // Brazos
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 2, y + 32, 4, 14);
+    ctx.fillRect(lx + 32, y + 32, 4, 14);
+    // Piernas
+    const lp = Math.sin(this.walkFrame) * 2;
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 12, y + 57, 5, 5 + lp);
+    ctx.fillRect(lx + 21, y + 57, 5, 5 - lp);
+    // Zapatos negros
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 10, y + 60, 9, 4);
+    ctx.fillRect(lx + 19, y + 60, 9, 4);
+    ctx.restore();
+  }
+}
+
+// ============ AVESTRUZ (enemigo común — Mundo 16 Ave) ============
+class Avestruz {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 32; this.h = 50;
+    this.startX = x;
+    this.range = range || 200;
+    this.vx = -1.6;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+    this.charging = false;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    // Acelera al ver al player
+    const target = getTargetPlayer(this);
+    if (target) {
+      const dist = Math.abs(target.x - this.x);
+      this.charging = dist < 200 && Math.abs(target.y - this.y) < 60;
+    }
+    const sp = this.charging ? 3.2 : 1.6;
+    if (this.vx < 0) this.vx = -sp; else this.vx = sp;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.2;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Cuerpo negro/marrón ovalado
+    ctx.fillStyle = '#3a2a20';
+    ctx.beginPath();
+    ctx.ellipse(lx + 18, y + 28, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Plumas
+    ctx.fillStyle = '#7a5a40';
+    ctx.fillRect(lx + 14, y + 22, 14, 4);
+    ctx.fillRect(lx + 18, y + 30, 12, 6);
+    // Cuello largo
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 10, y + 10, 4, 18);
+    // Cabeza
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 4, y + 2, 12, 12);
+    // Ojo
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 4, y + 6, 4, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 5, y + 7, 2, 2);
+    // Pico naranja
+    ctx.fillStyle = '#ffaa44';
+    ctx.beginPath();
+    ctx.moveTo(lx, y + 8); ctx.lineTo(lx + 4, y + 6); ctx.lineTo(lx + 4, y + 10);
+    ctx.closePath(); ctx.fill();
+    // Patas largas
+    const lp = Math.sin(this.walkFrame) * 4;
+    ctx.fillStyle = '#e8c090';
+    ctx.fillRect(lx + 14, y + 36, 3, 12 + lp);
+    ctx.fillRect(lx + 22, y + 36, 3, 12 - lp);
+    // Garras
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 13, y + 48 + lp, 5, 2);
+    ctx.fillRect(lx + 21, y + 48 - lp, 5, 2);
+    // Líneas de furia si carga
+    if (this.charging) {
+      ctx.strokeStyle = 'rgba(255, 50, 0, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(lx + 30, y + 10); ctx.lineTo(lx + 34, y + 6);
+      ctx.moveTo(lx + 30, y + 12); ctx.lineTo(lx + 34, y + 14);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ============ PINGÜINO DE AGUA (enemigo común — Mundo 16 Ave) ============
+class PinguinoAgua {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 28; this.h = 26;
+    this.startX = x;
+    this.range = range || 100;
+    this.vx = -1.5;
+    this.baseY = y;
+    this.phase = Math.random() * Math.PI * 2;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phase += dt * 3;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Nada con bobbing vertical
+    this.y = this.baseY + Math.sin(this.phase) * 6;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Cuerpo negro
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.ellipse(lx + 14, y + 14, 12, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Panza blanca
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(lx + 14, y + 16, 8, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Cabeza
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(lx + 14, y + 6, 7, 0, Math.PI * 2); ctx.fill();
+    // Ojos enojados (cazador)
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 10, y + 5, 3, 3);
+    ctx.fillRect(lx + 16, y + 5, 3, 3);
+    ctx.fillStyle = '#ff3300';
+    ctx.fillRect(lx + 11, y + 6, 1, 2);
+    ctx.fillRect(lx + 17, y + 6, 1, 2);
+    // Pico afilado
+    ctx.fillStyle = '#ffaa44';
+    ctx.beginPath();
+    ctx.moveTo(lx + 4, y + 9); ctx.lineTo(lx + 10, y + 8); ctx.lineTo(lx + 10, y + 11);
+    ctx.closePath(); ctx.fill();
+    // Aletas como remos
+    const flap = Math.sin(this.phase * 2) * 2;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(lx + 2, y + 12 + flap, 5, 8);
+    ctx.fillRect(lx + 22, y + 12 - flap, 5, 8);
+    // Burbujitas
+    ctx.fillStyle = 'rgba(220, 240, 255, 0.7)';
+    const b1 = (this.phase * 30) % 20;
+    ctx.beginPath(); ctx.arc(lx + 8, y - b1, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lx + 24, y - b1 + 10, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ============ LORO (jefe — Mundo 16 Ave) ============
+class Loro {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 60; this.h = 50;
+    this.startX = x;
+    this.baseY = y;
+    this.range = range || 240;
+    this.vx = -1.6;
+    this.phase = Math.random() * Math.PI * 2;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 5;
+    this.maxHp = 5;
+    this.invuln = 0;
+    this.isBoss = true;
+    this.shootTimer = 2;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 4; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phase += dt * 2;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Vuela en círculo (sine)
+    this.y = this.baseY + Math.sin(this.phase) * 40;
+    // Tira 3 plumas en abanico cada 2.5s
+    this.shootTimer -= dt;
+    if (this.shootTimer <= 0) {
+      this.shootTimer = 2.5;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const sp = 5;
+        for (let i = -1; i <= 1; i++) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x) + i * 0.25;
+          const pr = new Projectile(this.x + this.w / 2, this.y + this.h / 2,
+                                     Math.cos(angle) * sp, Math.sin(angle) * sp, 'feather_proj');
+          pr.life = 3;
+          game.projectiles.push(pr);
+        }
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // HP bar
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#3a9c2e' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 14, y - 14, 10, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 14, y - 14, 10, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Alas (animadas)
+    const flap = Math.sin(this.phase * 6) * 6;
+    ctx.fillStyle = '#3a9c2e';
+    ctx.beginPath();
+    ctx.moveTo(lx + 18, y + 18);
+    ctx.bezierCurveTo(lx - 5, y - 3 + flap, lx - 15, y + 18 + flap, lx + 12, y + 30);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a9c2e';
+    ctx.beginPath();
+    ctx.moveTo(lx + 42, y + 18);
+    ctx.bezierCurveTo(lx + 65, y - 3 + flap, lx + 75, y + 18 + flap, lx + 48, y + 30);
+    ctx.closePath(); ctx.fill();
+    // Plumas internas amarillas
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.moveTo(lx + 18, y + 20);
+    ctx.bezierCurveTo(lx + 5, y + 8 + flap, lx, y + 22 + flap, lx + 14, y + 28);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + 42, y + 20);
+    ctx.bezierCurveTo(lx + 55, y + 8 + flap, lx + 60, y + 22 + flap, lx + 46, y + 28);
+    ctx.closePath(); ctx.fill();
+    // Cuerpo rojo
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(lx + 20, y + 14, 20, 28);
+    // Panza amarilla
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(lx + 24, y + 22, 12, 16);
+    // Cabeza
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(lx + 14, y + 2, 24, 20);
+    // Cresta verde arriba
+    ctx.fillStyle = '#3a9c2e';
+    ctx.fillRect(lx + 18, y - 4, 4, 8);
+    ctx.fillRect(lx + 26, y - 6, 4, 10);
+    ctx.fillRect(lx + 34, y - 4, 4, 8);
+    // Ojos
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 18, y + 8, 4, 5);
+    ctx.fillRect(lx + 30, y + 8, 4, 5);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 19, y + 9, 2, 3);
+    ctx.fillRect(lx + 31, y + 9, 2, 3);
+    // Pico fuerte naranja
+    ctx.fillStyle = '#ff8800';
+    ctx.beginPath();
+    ctx.moveTo(lx + 6, y + 14); ctx.lineTo(lx + 16, y + 12); ctx.lineTo(lx + 16, y + 20);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#cc6600';
+    ctx.fillRect(lx + 12, y + 16, 4, 2);
+    // Patas
+    ctx.fillStyle = '#ffaa44';
+    ctx.fillRect(lx + 24, y + 42, 4, 6);
+    ctx.fillRect(lx + 32, y + 42, 4, 6);
+    ctx.fillStyle = '#cc6600';
+    ctx.fillRect(lx + 22, y + 47, 8, 2);
+    ctx.fillRect(lx + 30, y + 47, 8, 2);
+    ctx.restore();
+  }
+}
+
 // ============ SECRET DOOR (Mundo 5 - puerta secreta + tesoro) ============
 class SecretDoor {
   constructor(x, y, destX, destY, treasure = []) {
@@ -3276,6 +5205,10 @@ const WORLD_META = {
   perro:    { num: 10, emoji: '🐕', name: 'Plaza Perruna' },
   espacio:  { num: 11, emoji: '🚀', name: 'Espacio' },
   computadora: { num: 12, emoji: '💻', name: 'Computadora' },
+  pokemon:  { num: 13, emoji: '🔴', name: 'Pokémon' },
+  jardin:   { num: 14, emoji: '🎒', name: 'Jardín' },
+  pinocho:  { num: 15, emoji: '🤥', name: 'Pinocho' },
+  ave:      { num: 16, emoji: '🦜', name: 'Ave' },
 };
 
 // ============ LEVEL DATA ============
@@ -4544,6 +6477,422 @@ const LEVELS = [
       { type: 'mushroom', x: 2200, y: 410 },       // 1 vida extra final
     ],
   },
+
+  // --- NIVEL 24 — Pueblo Paleta (Mundo 13 Pokémon) ---
+  {
+    name: 'Pueblo Paleta',
+    world: 'pokemon',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 420, h: 50, type: 'pokemon_grass' },
+      { x: 500, y: 450, w: 280, h: 50, type: 'pokemon_grass' },
+      { x: 860, y: 450, w: 320, h: 50, type: 'pokemon_grass' },
+      { x: 1260, y: 450, w: 280, h: 50, type: 'pokemon_grass' },
+      { x: 1620, y: 450, w: 780, h: 50, type: 'pokemon_grass' },
+      { x: 180, y: 360, w: 110, h: 18, type: 'wood' },
+      { x: 350, y: 290, w: 100, h: 18, type: 'wood' },
+      { x: 540, y: 330, w: 110, h: 18, type: 'wood' },
+      { x: 720, y: 260, w: 100, h: 18, type: 'wood' },
+      { x: 920, y: 320, w: 120, h: 18, type: 'pokemon_grass' },
+      { x: 1100, y: 250, w: 100, h: 18, type: 'wood' },
+      { x: 1300, y: 320, w: 110, h: 18, type: 'wood' },
+      { x: 1460, y: 250, w: 100, h: 18, type: 'wood' },
+      { x: 1680, y: 300, w: 120, h: 18, type: 'pokemon_grass' },
+      { x: 1860, y: 230, w: 100, h: 18, type: 'wood' },
+      { x: 2040, y: 300, w: 110, h: 18, type: 'wood' },
+      { x: 2200, y: 230, w: 100, h: 18, type: 'wood' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 140, y: 410 },
+      { x: 220, y: 320 }, { x: 260, y: 320 },
+      { x: 380, y: 250 }, { x: 410, y: 250 },
+      { x: 570, y: 290 }, { x: 610, y: 290 },
+      { x: 740, y: 220 }, { x: 780, y: 220 },
+      { x: 950, y: 280 }, { x: 990, y: 280 },
+      { x: 1120, y: 210 }, { x: 1320, y: 280 },
+      { x: 1480, y: 210 }, { x: 1700, y: 260 }, { x: 1740, y: 260 },
+      { x: 1880, y: 190 }, { x: 2060, y: 260 }, { x: 2220, y: 190 },
+    ],
+    enemies: [
+      { type: 'squirtle', x: 540, y: 422, range: 60 },
+      { type: 'squirtle', x: 920, y: 422, range: 80 },
+      { type: 'blastoise', x: 1300, y: 408, range: 90 },
+      { type: 'squirtle', x: 1720, y: 422, range: 100 },
+      { type: 'squirtle', x: 2000, y: 422, range: 90 },
+    ],
+    powerups: [
+      { type: 'electricidad', x: 220, y: 320 },     // intro: rayos
+      { type: 'chorro_agua', x: 570, y: 290 },      // intro: agua
+      { type: 'mushroom', x: 950, y: 280 },         // vida (visual = pokeball)
+      { type: 'fuego_pkmn', x: 1120, y: 210 },      // intro: fuego
+      { type: 'plata', x: 1480, y: 210 },           // monedas x2
+      { type: 'feather', x: 1880, y: 190 },
+      { type: 'star', x: 2220, y: 190 },
+    ],
+  },
+
+  // --- NIVEL 25 — Cueva Charizard (JEFE) ---
+  {
+    name: 'Cueva Charizard',
+    world: 'pokemon',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 440, h: 50, type: 'pokemon_grass' },
+      { x: 540, y: 450, w: 280, h: 50, type: 'pokemon_grass' },
+      { x: 900, y: 450, w: 220, h: 50, type: 'pokemon_grass' },
+      { x: 1200, y: 450, w: 240, h: 50, type: 'pokemon_grass' },
+      // Arena del jefe (Charizard vuela arriba)
+      { x: 1520, y: 450, w: 880, h: 50, type: 'pokemon_grass' },
+      { x: 180, y: 360, w: 90, h: 18, type: 'wood' },
+      { x: 340, y: 280, w: 90, h: 18, type: 'wood' },
+      { x: 580, y: 330, w: 100, h: 18, type: 'wood' },
+      { x: 740, y: 260, w: 100, h: 18, type: 'wood' },
+      { x: 940, y: 320, w: 100, h: 18, type: 'pokemon_grass' },
+      { x: 1240, y: 320, w: 110, h: 18, type: 'pokemon_grass' },
+      // Plataformas en arena boss
+      { x: 1600, y: 330, w: 120, h: 18, type: 'pokemon_grass' },
+      { x: 1880, y: 290, w: 130, h: 18, type: 'pokemon_grass' },
+      { x: 2160, y: 330, w: 120, h: 18, type: 'pokemon_grass' },
+    ],
+    coins: [
+      { x: 120, y: 410 }, { x: 200, y: 320 }, { x: 360, y: 240 },
+      { x: 600, y: 290 }, { x: 760, y: 220 },
+      { x: 960, y: 280 }, { x: 1260, y: 280 },
+      { x: 1620, y: 290 }, { x: 1900, y: 250 }, { x: 2180, y: 290 },
+    ],
+    enemies: [
+      { type: 'squirtle', x: 580, y: 422, range: 70 },
+      { type: 'blastoise', x: 940, y: 408, range: 70 },
+      { type: 'squirtle', x: 1240, y: 422, range: 70 },
+      // JEFE: Charizard volando
+      { type: 'charizard', x: 1900, y: 200, range: 280 },
+    ],
+    powerups: [
+      { type: 'chorro_agua', x: 200, y: 320 },     // clave vs fuego
+      { type: 'shield', x: 600, y: 290 },
+      { type: 'plata', x: 960, y: 280 },           // x2 coins en la arena
+      { type: 'chorro_agua', x: 1620, y: 290 },    // refill
+      { type: 'shield', x: 1900, y: 250 },
+      { type: 'star', x: 2180, y: 290 },
+      { type: 'mushroom', x: 2300, y: 410 },
+    ],
+  },
+
+  // --- NIVEL 26 — Recreo Loco (Mundo 14 Jardín) ---
+  {
+    name: 'Recreo Loco',
+    world: 'jardin',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 400, h: 50, type: 'jardin_block' },
+      { x: 480, y: 450, w: 280, h: 50, type: 'jardin_block' },
+      { x: 840, y: 450, w: 280, h: 50, type: 'jardin_block' },
+      { x: 1200, y: 450, w: 280, h: 50, type: 'jardin_block' },
+      { x: 1560, y: 450, w: 280, h: 50, type: 'jardin_block' },
+      { x: 1920, y: 450, w: 480, h: 50, type: 'jardin_block' },
+      // Bloques de juguete suspendidos
+      { x: 200, y: 360, w: 90, h: 18, type: 'jardin_block' },
+      { x: 360, y: 280, w: 80, h: 18, type: 'jardin_block' },
+      { x: 540, y: 330, w: 100, h: 18, type: 'jardin_block' },
+      { x: 720, y: 260, w: 90, h: 18, type: 'jardin_block' },
+      { x: 880, y: 320, w: 100, h: 18, type: 'wood' },
+      { x: 1080, y: 230, w: 100, h: 18, type: 'jardin_block' },
+      { x: 1280, y: 320, w: 110, h: 18, type: 'wood' },
+      { x: 1460, y: 250, w: 100, h: 18, type: 'jardin_block' },
+      { x: 1660, y: 320, w: 110, h: 18, type: 'wood' },
+      { x: 1860, y: 250, w: 110, h: 18, type: 'jardin_block' },
+      { x: 2060, y: 320, w: 110, h: 18, type: 'jardin_block' },
+      { x: 2240, y: 220, w: 110, h: 18, type: 'jardin_block' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 140, y: 410 },
+      { x: 230, y: 320 }, { x: 380, y: 240 },
+      { x: 570, y: 290 }, { x: 740, y: 220 },
+      { x: 900, y: 280 }, { x: 1100, y: 190 },
+      { x: 1300, y: 280 }, { x: 1480, y: 210 },
+      { x: 1680, y: 280 }, { x: 1880, y: 210 },
+      { x: 2080, y: 280 }, { x: 2260, y: 180 },
+    ],
+    enemies: [
+      { type: 'mochila', x: 560, y: 420, range: 80 },
+      { type: 'nene_saltando', x: 870, y: 414 },
+      { type: 'mochila', x: 1240, y: 420, range: 100 },
+      { type: 'nene_saltando', x: 1650, y: 414 },
+      { type: 'mochila', x: 1980, y: 420, range: 120 },
+      { type: 'nene_saltando', x: 2150, y: 414 },
+    ],
+    powerups: [
+      { type: 'cuarto_salto', x: 230, y: 320 },    // intro: 4 saltos
+      { type: 'bola_nieve', x: 570, y: 290 },      // intro: proyectil ❄️
+      { type: 'mushroom', x: 900, y: 280 },        // vida (visual = crayón)
+      { type: 'mega_rapido', x: 1100, y: 190 },    // intro: x2.5 speed
+      { type: 'feather', x: 1480, y: 210 },
+      { type: 'bola_nieve', x: 1880, y: 210 },     // refill
+      { type: 'star', x: 2260, y: 180 },
+    ],
+  },
+
+  // --- NIVEL 27 — La Seño Furiosa (JEFE) ---
+  {
+    name: 'La Seño Furiosa',
+    world: 'jardin',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 460, h: 50, type: 'jardin_block' },
+      { x: 540, y: 450, w: 260, h: 50, type: 'jardin_block' },
+      { x: 880, y: 450, w: 220, h: 50, type: 'jardin_block' },
+      { x: 1180, y: 450, w: 240, h: 50, type: 'jardin_block' },
+      // Arena aula del jefe
+      { x: 1500, y: 450, w: 900, h: 50, type: 'jardin_block' },
+      { x: 200, y: 360, w: 100, h: 18, type: 'jardin_block' },
+      { x: 360, y: 280, w: 100, h: 18, type: 'jardin_block' },
+      { x: 560, y: 330, w: 100, h: 18, type: 'jardin_block' },
+      { x: 740, y: 250, w: 100, h: 18, type: 'jardin_block' },
+      { x: 920, y: 320, w: 100, h: 18, type: 'wood' },
+      { x: 1220, y: 320, w: 110, h: 18, type: 'jardin_block' },
+      // Plataformas arena boss (saltos altos requeridos)
+      { x: 1580, y: 320, w: 120, h: 18, type: 'jardin_block' },
+      { x: 1820, y: 250, w: 120, h: 18, type: 'jardin_block' },
+      { x: 2060, y: 320, w: 120, h: 18, type: 'jardin_block' },
+      { x: 2240, y: 220, w: 120, h: 18, type: 'jardin_block' },
+    ],
+    coins: [
+      { x: 120, y: 410 }, { x: 220, y: 320 }, { x: 380, y: 240 },
+      { x: 580, y: 290 }, { x: 760, y: 210 }, { x: 940, y: 280 },
+      { x: 1240, y: 280 }, { x: 1600, y: 280 }, { x: 1840, y: 210 },
+      { x: 2080, y: 280 }, { x: 2260, y: 180 },
+    ],
+    enemies: [
+      { type: 'mochila', x: 580, y: 420, range: 80 },
+      { type: 'nene_saltando', x: 920, y: 414 },
+      { type: 'mochila', x: 1240, y: 420, range: 70 },
+      // JEFE: Maestra
+      { type: 'maestra', x: 1900, y: 386, range: 350 },
+    ],
+    powerups: [
+      { type: 'cinco_saltos', x: 220, y: 320 },    // 5 saltos para esquivar
+      { type: 'bola_nieve', x: 580, y: 290 },
+      { type: 'shield', x: 940, y: 280 },
+      { type: 'cinco_saltos', x: 1600, y: 280 },   // refill
+      { type: 'bola_nieve', x: 1840, y: 210 },     // refill
+      { type: 'star', x: 2080, y: 280 },
+      { type: 'mushroom', x: 2300, y: 410 },
+    ],
+  },
+
+  // --- NIVEL 28 — Taller de Juguetes (Mundo 15 Pinocho) ---
+  {
+    name: 'Taller de Juguetes',
+    world: 'pinocho',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 400, h: 50, type: 'wood_old' },
+      { x: 480, y: 450, w: 240, h: 50, type: 'wood_old' },
+      { x: 820, y: 450, w: 260, h: 50, type: 'wood_old' },
+      { x: 1180, y: 450, w: 240, h: 50, type: 'wood_old' },
+      { x: 1520, y: 450, w: 260, h: 50, type: 'wood_old' },
+      { x: 1880, y: 450, w: 520, h: 50, type: 'wood_old' },
+      { x: 180, y: 360, w: 110, h: 18, type: 'wood_old' },
+      { x: 360, y: 290, w: 100, h: 18, type: 'wood_old' },
+      { x: 540, y: 330, w: 110, h: 18, type: 'wood_old' },
+      { x: 720, y: 260, w: 100, h: 18, type: 'wood_old' },
+      { x: 880, y: 330, w: 110, h: 18, type: 'wood_old' },
+      { x: 1080, y: 240, w: 110, h: 18, type: 'wood_old' },
+      { x: 1280, y: 320, w: 110, h: 18, type: 'moving', rangeX: 80, period: 3 },
+      { x: 1460, y: 260, w: 110, h: 18, type: 'wood_old' },
+      { x: 1660, y: 330, w: 110, h: 18, type: 'wood_old' },
+      { x: 1860, y: 260, w: 110, h: 18, type: 'wood_old' },
+      { x: 2060, y: 330, w: 110, h: 18, type: 'wood_old' },
+      { x: 2240, y: 220, w: 110, h: 18, type: 'wood_old' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 200, y: 320 }, { x: 380, y: 250 },
+      { x: 570, y: 290 }, { x: 740, y: 220 },
+      { x: 900, y: 290 }, { x: 1100, y: 200 },
+      { x: 1300, y: 280 }, { x: 1480, y: 220 },
+      { x: 1680, y: 290 }, { x: 1880, y: 220 },
+      { x: 2080, y: 290 }, { x: 2260, y: 180 },
+    ],
+    enemies: [
+      { type: 'caballo_juguete', x: 530, y: 422, range: 70 },
+      { type: 'caballo_juguete', x: 880, y: 422, range: 100 },
+      { type: 'caballo_juguete', x: 1300, y: 422, range: 80 },
+      { type: 'caballo_juguete', x: 1660, y: 422, range: 100 },
+      { type: 'caballo_juguete', x: 2060, y: 422, range: 110 },
+    ],
+    powerups: [
+      { type: 'torpedo_super', x: 200, y: 320 },   // intro: torpedo que atraviesa
+      { type: 'super_pedo', x: 570, y: 290 },      // intro: 4 saltos aéreos
+      { type: 'mushroom', x: 900, y: 290 },        // vida (visual = nariz)
+      { type: 'mega_salto', x: 1100, y: 200 },     // intro: salto x2 (un uso)
+      { type: 'feather', x: 1480, y: 220 },
+      { type: 'mega_salto', x: 1880, y: 220 },     // refill
+      { type: 'star', x: 2260, y: 180 },
+    ],
+  },
+
+  // --- NIVEL 29 — Las Mentiras de Pinocho (JEFE) ---
+  {
+    name: 'Las Mentiras de Pinocho',
+    world: 'pinocho',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 460, h: 50, type: 'wood_old' },
+      { x: 540, y: 450, w: 240, h: 50, type: 'wood_old' },
+      { x: 880, y: 450, w: 240, h: 50, type: 'wood_old' },
+      { x: 1180, y: 450, w: 280, h: 50, type: 'wood_old' },
+      // Arena del jefe
+      { x: 1540, y: 450, w: 860, h: 50, type: 'wood_old' },
+      { x: 200, y: 360, w: 100, h: 18, type: 'wood_old' },
+      { x: 360, y: 280, w: 100, h: 18, type: 'wood_old' },
+      { x: 560, y: 330, w: 100, h: 18, type: 'wood_old' },
+      { x: 740, y: 260, w: 100, h: 18, type: 'wood_old' },
+      { x: 920, y: 320, w: 100, h: 18, type: 'wood_old' },
+      { x: 1240, y: 280, w: 110, h: 18, type: 'wood_old' },
+      // Plataformas en arena boss
+      { x: 1620, y: 330, w: 120, h: 18, type: 'wood_old' },
+      { x: 1860, y: 270, w: 130, h: 18, type: 'wood_old' },
+      { x: 2120, y: 330, w: 120, h: 18, type: 'wood_old' },
+    ],
+    coins: [
+      { x: 120, y: 410 }, { x: 220, y: 320 },
+      { x: 380, y: 240 }, { x: 580, y: 290 },
+      { x: 760, y: 220 }, { x: 940, y: 280 },
+      { x: 1260, y: 240 }, { x: 1640, y: 290 },
+      { x: 1880, y: 230 }, { x: 2140, y: 290 },
+    ],
+    enemies: [
+      { type: 'caballo_juguete', x: 580, y: 422, range: 70 },
+      { type: 'caballo_juguete', x: 920, y: 422, range: 80 },
+      { type: 'caballo_juguete', x: 1240, y: 422, range: 70 },
+      // JEFE: Pinocho con nariz extensible
+      { type: 'pinocho_boss', x: 1900, y: 386, range: 320 },
+    ],
+    powerups: [
+      { type: 'torpedo_super', x: 220, y: 320 },   // atraviesa enemigos
+      { type: 'mega_salto', x: 580, y: 290 },
+      { type: 'shield', x: 940, y: 280 },
+      { type: 'torpedo_super', x: 1640, y: 290 },  // refill
+      { type: 'mega_salto', x: 1880, y: 230 },
+      { type: 'star', x: 2140, y: 290 },
+      { type: 'mushroom', x: 2300, y: 410 },
+    ],
+  },
+
+  // --- NIVEL 30 — Nido en el Árbol (Mundo 16 Ave) ---
+  {
+    name: 'Nido en el Árbol',
+    world: 'ave',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 200 },
+    goal: { x: 2320, y: 140, w: 40, h: 110 },
+    platforms: [
+      // Plataforma de inicio (arriba)
+      { x: 0, y: 250, w: 320, h: 18, type: 'wood' },
+      // Copa del árbol (varias alturas)
+      { x: 380, y: 220, w: 150, h: 18, type: 'wood' },
+      { x: 580, y: 180, w: 120, h: 18, type: 'cloud' },
+      { x: 760, y: 220, w: 130, h: 18, type: 'wood' },
+      { x: 940, y: 260, w: 140, h: 18, type: 'cloud' },
+      { x: 1140, y: 200, w: 130, h: 18, type: 'wood' },
+      { x: 1320, y: 240, w: 140, h: 18, type: 'cloud' },
+      { x: 1520, y: 200, w: 130, h: 18, type: 'wood' },
+      { x: 1700, y: 240, w: 140, h: 18, type: 'cloud' },
+      { x: 1900, y: 200, w: 130, h: 18, type: 'wood' },
+      { x: 2080, y: 160, w: 140, h: 18, type: 'cloud' },
+      { x: 2260, y: 250, w: 140, h: 18, type: 'wood' },
+      // Suelo "agua" para nadar abajo
+      { x: 0, y: 480, w: 2400, h: 20, type: 'wood_old' }, // fondo del agua
+    ],
+    coins: [
+      { x: 130, y: 210 }, { x: 200, y: 210 },
+      { x: 420, y: 180 }, { x: 620, y: 140 },
+      { x: 800, y: 180 }, { x: 980, y: 220 },
+      { x: 1180, y: 160 }, { x: 1360, y: 200 },
+      { x: 1560, y: 160 }, { x: 1740, y: 200 },
+      { x: 1940, y: 160 }, { x: 2120, y: 120 },
+      // Tesoros en el agua (premio por nadar)
+      { x: 600, y: 420 }, { x: 1200, y: 420 }, { x: 1800, y: 420 },
+    ],
+    enemies: [
+      { type: 'avestruz', x: 600, y: 170, range: 100 },
+      { type: 'avestruz', x: 1140, y: 150, range: 130 },
+      { type: 'avestruz', x: 1700, y: 190, range: 140 },
+      // Pingüinos en el agua (dañan al contacto)
+      { type: 'pinguino_agua', x: 500, y: 410, range: 100 },
+      { type: 'pinguino_agua', x: 1100, y: 420, range: 140 },
+      { type: 'pinguino_agua', x: 1750, y: 410, range: 130 },
+    ],
+    hazards: [
+      // Zona de agua abajo (nadable, no daña)
+      { type: 'water_swim', x: 0, y: 380, w: 2400, h: 100 },
+    ],
+    powerups: [
+      { type: 'picar', x: 200, y: 210 },           // intro: ataque pico
+      { type: 'submarino', x: 800, y: 180 },       // intro: inmune pingüinos del agua
+      { type: 'mushroom', x: 1180, y: 160 },       // vida (visual = huevo)
+      { type: 'submarino', x: 1560, y: 160 },      // refill
+      { type: 'feather', x: 1940, y: 160 },
+      { type: 'star', x: 2120, y: 120 },
+    ],
+  },
+
+  // --- NIVEL 31 — Cielo del Loro (JEFE FINAL ABSOLUTO) ---
+  {
+    name: 'Cielo del Loro',
+    world: 'ave',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2320, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 320, h: 50, type: 'cloud' },
+      { x: 400, y: 380, w: 160, h: 20, type: 'cloud' },
+      { x: 620, y: 320, w: 160, h: 20, type: 'cloud' },
+      { x: 840, y: 380, w: 160, h: 20, type: 'cloud' },
+      { x: 1060, y: 320, w: 160, h: 20, type: 'cloud' },
+      // Arena del jefe (plataformas de nube en el aire)
+      { x: 1340, y: 450, w: 1060, h: 50, type: 'cloud' },
+      { x: 1480, y: 350, w: 140, h: 20, type: 'cloud' },
+      { x: 1720, y: 280, w: 160, h: 20, type: 'cloud' },
+      { x: 1960, y: 350, w: 140, h: 20, type: 'cloud' },
+      { x: 2180, y: 280, w: 160, h: 20, type: 'cloud' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 200, y: 410 },
+      { x: 440, y: 340 }, { x: 660, y: 280 },
+      { x: 880, y: 340 }, { x: 1100, y: 280 },
+      { x: 1380, y: 410 }, { x: 1520, y: 310 },
+      { x: 1760, y: 240 }, { x: 2000, y: 310 },
+      { x: 2220, y: 240 },
+    ],
+    enemies: [
+      { type: 'avestruz', x: 660, y: 270, range: 100 },
+      { type: 'avestruz', x: 1100, y: 270, range: 100 },
+      // JEFE FINAL: Loro
+      { type: 'loro', x: 1800, y: 240, range: 380 },
+    ],
+    powerups: [
+      { type: 'volar', x: 200, y: 410 },           // intro: vuelo libre 8s
+      { type: 'picar', x: 440, y: 340 },
+      { type: 'shield', x: 880, y: 340 },
+      { type: 'volar', x: 1520, y: 310 },          // refill (clave: bandera arriba)
+      { type: 'picar', x: 1760, y: 240 },
+      { type: 'star', x: 2000, y: 310 },
+      { type: 'mushroom', x: 2220, y: 240 },
+    ],
+  },
 ];
 
 // Wrapper para dañar a un player específico en el game loop
@@ -4585,6 +6934,18 @@ function spawnEnemy(e) {
   if (e.type === 'giant_dog') return new GiantDog(e.x, e.y, e.range);
   if (e.type === 'green_alien') return new GreenAlien(e.x, e.y, e.range);
   if (e.type === 'evil_robot') return new EvilRobot(e.x, e.y, e.range);
+  // Mundos 13-16
+  if (e.type === 'squirtle') return new Squirtle(e.x, e.y, e.range);
+  if (e.type === 'blastoise') return new Blastoise(e.x, e.y, e.range);
+  if (e.type === 'charizard') return new Charizard(e.x, e.y, e.range);
+  if (e.type === 'mochila') return new Mochila(e.x, e.y, e.range);
+  if (e.type === 'nene_saltando') return new NeneSaltando(e.x, e.y);
+  if (e.type === 'maestra') return new Maestra(e.x, e.y, e.range);
+  if (e.type === 'caballo_juguete') return new CaballoJuguete(e.x, e.y, e.range);
+  if (e.type === 'pinocho_boss') return new PinochoBoss(e.x, e.y, e.range);
+  if (e.type === 'avestruz') return new Avestruz(e.x, e.y, e.range);
+  if (e.type === 'pinguino_agua') return new PinguinoAgua(e.x, e.y, e.range);
+  if (e.type === 'loro') return new Loro(e.x, e.y, e.range);
   return null;
 }
 
@@ -4769,6 +7130,10 @@ function drawBackground() {
   if (world === 'perro') return drawPerroBg();
   if (world === 'espacio') return drawEspacioBg();
   if (world === 'computadora') return drawComputadoraBg();
+  if (world === 'pokemon') return drawPokemonBg();
+  if (world === 'jardin') return drawJardinBg();
+  if (world === 'pinocho') return drawPinochoBg();
+  if (world === 'ave') return drawAveBg();
   return drawJungleBg();
 }
 
@@ -5431,6 +7796,279 @@ function drawComputadoraBg() {
   ctx.fillRect(0, H - 20, W, 20);
 }
 
+// ============ BACKGROUNDS — MUNDOS 13-16 ============
+
+function drawPokemonBg() {
+  const camX = game.camera.x;
+  // Cielo celeste pokémon
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#8ed2f5');
+  sky.addColorStop(0.6, '#cce8e8');
+  sky.addColorStop(1, '#a8d8b8');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  // Sol amarillo
+  ctx.fillStyle = '#ffeb00';
+  ctx.beginPath(); ctx.arc(660, 80, 32, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255, 235, 0, 0.3)';
+  ctx.beginPath(); ctx.arc(660, 80, 48, 0, Math.PI * 2); ctx.fill();
+  // Nubes blancas tipo pokemon
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  for (let i = -1; i < 8; i++) {
+    const x = i * 280 - (camX * 0.15) % 280;
+    ctx.beginPath();
+    ctx.arc(x, 90, 18, 0, Math.PI * 2);
+    ctx.arc(x + 22, 80, 22, 0, Math.PI * 2);
+    ctx.arc(x + 50, 88, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Colinas verdes parallax
+  for (let layer = 0; layer < 3; layer++) {
+    const alpha = 0.5 + layer * 0.2;
+    const par = 0.18 + layer * 0.12;
+    const py = 320 + layer * 30;
+    ctx.fillStyle = `rgba(${50 - layer * 8}, ${130 + layer * 20}, ${60 + layer * 10}, ${alpha})`;
+    for (let i = -1; i < 8; i++) {
+      const x = i * 360 - (camX * par) % 360;
+      ctx.beginPath();
+      ctx.moveTo(x, py + 100);
+      ctx.quadraticCurveTo(x + 180, py - 20, x + 360, py + 100);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // Árboles redondos tipo pokemon (parallax cercano)
+  for (let i = -1; i < 12; i++) {
+    const x = i * 240 - (camX * 0.55) % 240;
+    // Tronco
+    ctx.fillStyle = '#6a3a18';
+    ctx.fillRect(x + 30, 360, 12, 60);
+    // Copa redondeada (3 capas verdes)
+    ctx.fillStyle = '#2a6a1a';
+    ctx.beginPath(); ctx.arc(x + 36, 350, 30, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a8a2a';
+    ctx.beginPath(); ctx.arc(x + 30, 340, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a9c3a';
+    ctx.beginPath(); ctx.arc(x + 38, 332, 16, 0, Math.PI * 2); ctx.fill();
+    // Brillito blanco
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath(); ctx.arc(x + 30, 332, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  // Pikachu silueta corriendo al fondo (parallax muy lejano)
+  const pikaX = (camX * 0.1) % (W + 200) - 100;
+  if (pikaX > -60 && pikaX < W + 60) {
+    ctx.fillStyle = 'rgba(255, 235, 0, 0.6)';
+    ctx.fillRect(pikaX, 380, 18, 16);
+    // Orejas
+    ctx.fillRect(pikaX + 2, 372, 4, 10);
+    ctx.fillRect(pikaX + 12, 372, 4, 10);
+    // Cola en zigzag
+    ctx.fillRect(pikaX + 18, 386, 6, 4);
+    ctx.fillRect(pikaX + 22, 382, 4, 4);
+  }
+}
+
+function drawJardinBg() {
+  const camX = game.camera.x;
+  // Pared verde claro (interior aula)
+  const wall = ctx.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, '#c0e0a8');
+  wall.addColorStop(0.7, '#d0e8b8');
+  wall.addColorStop(1, '#a8c890');
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 0, W, H);
+  // Friso decorativo arriba (cenefa)
+  ctx.fillStyle = '#88b860';
+  ctx.fillRect(0, 0, W, 50);
+  ctx.fillStyle = '#a0d070';
+  for (let i = 0; i < W; i += 20) {
+    ctx.beginPath();
+    ctx.arc(i + 10, 50, 8, Math.PI, 0);
+    ctx.closePath(); ctx.fill();
+  }
+  // Pizarrón negro grande (parallax lento)
+  const pbX = 100 - (camX * 0.25) % 800;
+  for (let i = -1; i < 4; i++) {
+    const bx = pbX + i * 800;
+    ctx.fillStyle = '#3a2818';
+    ctx.fillRect(bx, 80, 240, 130);
+    ctx.fillStyle = '#1a2818';
+    ctx.fillRect(bx + 6, 86, 228, 118);
+    // ABC + dibujos del nene
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ABC', bx + 70, 130);
+    ctx.fillText('123', bx + 70, 170);
+    // Sol dibujado
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(bx + 180, 140, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+    for (let r = 0; r < 8; r++) {
+      const a = (r / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(bx + 180 + Math.cos(a) * 18, 140 + Math.sin(a) * 18);
+      ctx.lineTo(bx + 180 + Math.cos(a) * 24, 140 + Math.sin(a) * 24);
+      ctx.stroke();
+    }
+    // Casita dibujada
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillRect(bx + 160, 180, 30, 20);
+    ctx.beginPath();
+    ctx.moveTo(bx + 155, 180); ctx.lineTo(bx + 175, 160); ctx.lineTo(bx + 195, 180);
+    ctx.closePath(); ctx.fill();
+  }
+  // Estantes con juguetes (parallax medio)
+  for (let i = -1; i < 6; i++) {
+    const sx = i * 420 - (camX * 0.4) % 420;
+    // Estante de madera
+    ctx.fillStyle = '#8b6139';
+    ctx.fillRect(sx, 260, 200, 8);
+    // Juguetes encima
+    ctx.fillStyle = '#ff3300';
+    ctx.fillRect(sx + 15, 240, 18, 20);
+    ctx.fillStyle = '#3a9ad6';
+    ctx.beginPath(); ctx.arc(sx + 60, 250, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(sx + 90, 240, 14, 20);
+    ctx.fillStyle = '#aa3399';
+    ctx.beginPath(); ctx.arc(sx + 130, 248, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a9c3a';
+    ctx.fillRect(sx + 160, 244, 16, 16);
+  }
+}
+
+function drawPinochoBg() {
+  const camX = game.camera.x;
+  // Taller marrón oscuro
+  const wall = ctx.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, '#3a2a1a');
+  wall.addColorStop(0.5, '#5a3a20');
+  wall.addColorStop(1, '#3a2010');
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 0, W, H);
+  // Tablones del fondo
+  ctx.fillStyle = '#6a4520';
+  for (let i = 0; i < W + 80; i += 80) {
+    const px = i - (camX * 0.1) % 80;
+    ctx.fillRect(px, 0, 6, H);
+  }
+  // Ventana con luna (parallax lento)
+  const vx = 200 - (camX * 0.2) % 1200;
+  for (let i = -1; i < 4; i++) {
+    const wx = vx + i * 1200;
+    // Marco
+    ctx.fillStyle = '#8b6139';
+    ctx.fillRect(wx, 60, 140, 160);
+    ctx.fillStyle = '#1a1a3a';
+    ctx.fillRect(wx + 8, 68, 124, 144);
+    // Cruz
+    ctx.fillStyle = '#8b6139';
+    ctx.fillRect(wx + 68, 68, 4, 144);
+    ctx.fillRect(wx + 8, 138, 124, 4);
+    // Luna
+    ctx.fillStyle = '#fff8d0';
+    ctx.beginPath(); ctx.arc(wx + 100, 110, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a2a4a';
+    ctx.beginPath(); ctx.arc(wx + 108, 105, 18, 0, Math.PI * 2); ctx.fill();
+    // Estrellitas
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(wx + 30, 90, 2, 2);
+    ctx.fillRect(wx + 50, 120, 2, 2);
+    ctx.fillRect(wx + 30, 170, 2, 2);
+  }
+  // Marionetas colgando (parallax medio)
+  for (let i = -1; i < 8; i++) {
+    const mx = i * 320 - (camX * 0.35) % 320;
+    // Cuerda
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mx + 25, 0); ctx.lineTo(mx + 25, 240);
+    ctx.stroke();
+    // Cabeza
+    ctx.fillStyle = '#e8c090';
+    ctx.beginPath(); ctx.arc(mx + 25, 250, 10, 0, Math.PI * 2); ctx.fill();
+    // Sombrero verde
+    ctx.fillStyle = '#3a9c3e';
+    ctx.fillRect(mx + 18, 238, 14, 6);
+    ctx.fillStyle = '#5fc060';
+    ctx.beginPath();
+    ctx.moveTo(mx + 22, 240); ctx.lineTo(mx + 28, 240); ctx.lineTo(mx + 25, 232);
+    ctx.closePath(); ctx.fill();
+    // Cuerpo
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(mx + 18, 256, 14, 18);
+    // Nariz
+    ctx.fillStyle = '#c68a4a';
+    ctx.fillRect(mx + 28, 250, 5, 2);
+  }
+  // Martillo y serrucho colgados en la pared
+  ctx.fillStyle = '#8b6139';
+  ctx.fillRect(50 - (camX * 0.1) % 700, 30, 30, 6);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(75 - (camX * 0.1) % 700, 25, 12, 18);
+}
+
+function drawAveBg() {
+  const camX = game.camera.x;
+  // Cielo dégradé celeste→amarillo (atardecer suave)
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#7ec5f5');
+  sky.addColorStop(0.4, '#aae0ec');
+  sky.addColorStop(0.7, '#f5e0a0');
+  sky.addColorStop(1, '#a8d090');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  // Sol grande
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(700, 110, 50, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+  ctx.beginPath(); ctx.arc(700, 110, 80, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255, 220, 100, 0.2)';
+  ctx.beginPath(); ctx.arc(700, 110, 120, 0, Math.PI * 2); ctx.fill();
+  // Nubes blancas
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = -1; i < 6; i++) {
+    const x = i * 360 - (camX * 0.18) % 360;
+    ctx.beginPath();
+    ctx.arc(x, 150, 22, 0, Math.PI * 2);
+    ctx.arc(x + 26, 140, 26, 0, Math.PI * 2);
+    ctx.arc(x + 60, 150, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Árbol gigante de fondo (parallax lento)
+  const tx = 400 - (camX * 0.25) % 1600;
+  for (let i = -1; i < 3; i++) {
+    const bx = tx + i * 1600;
+    // Tronco enorme
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(bx, 280, 50, 180);
+    ctx.fillStyle = '#3a1f0a';
+    ctx.fillRect(bx, 280, 12, 180);
+    // Copa gigante
+    ctx.fillStyle = '#2a6a1a';
+    ctx.beginPath(); ctx.arc(bx + 25, 230, 110, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a8a2a';
+    ctx.beginPath(); ctx.arc(bx - 30, 240, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx + 80, 240, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a9c3a';
+    ctx.beginPath(); ctx.arc(bx + 20, 200, 60, 0, Math.PI * 2); ctx.fill();
+  }
+  // Pájaros silueta volando (parallax medio)
+  for (let i = -1; i < 10; i++) {
+    const px = i * 200 - (camX * 0.4) % 200;
+    const py = 100 + (i * 31) % 80;
+    const wave = Math.sin(game.time * 3 + i) * 3;
+    ctx.fillStyle = 'rgba(40, 30, 30, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(px, py); ctx.quadraticCurveTo(px + 5, py - 5 + wave, px + 10, py);
+    ctx.quadraticCurveTo(px + 15, py - 5 - wave, px + 20, py);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(40, 30, 30, 0.5)';
+    ctx.stroke();
+  }
+}
+
 function drawPlatform(p) {
   const x = Math.round(p.x - game.camera.x);
   const y = Math.round(p.y);
@@ -5694,6 +8332,118 @@ function drawPlatform(p) {
       ctx.fillRect(cx - 3, cy - 6, 6, 2);
       ctx.fillRect(cx - 3, cy + 4, 6, 2);
     }
+  } else if (p.type === 'pokemon_grass') {
+    // Hierba pokemon — verde brillante con flores rosas/blancas
+    ctx.fillStyle = '#5fa030';
+    ctx.fillRect(x, y, p.w, p.h);
+    ctx.fillStyle = '#7cc040';
+    ctx.fillRect(x, y, p.w, 7);
+    // Tierra debajo
+    ctx.fillStyle = '#7a5030';
+    ctx.fillRect(x, y + 10, p.w, p.h - 10);
+    ctx.fillStyle = '#5a3818';
+    for (let i = 4; i < p.w; i += 18) {
+      for (let j = 16; j < p.h; j += 14) ctx.fillRect(x + i, y + j, 4, 3);
+    }
+    // Hierbitas asomadas arriba
+    ctx.fillStyle = '#3a8a20';
+    for (let i = 3; i < p.w; i += 6) {
+      ctx.fillRect(x + i, y - 4, 1, 4);
+      ctx.fillRect(x + i + 2, y - 3, 1, 3);
+    }
+    // Flores rosas y blancas
+    for (let i = 16; i < p.w; i += 32) {
+      const isRosa = (Math.floor(p.x / 30) + i) % 2 === 0;
+      ctx.fillStyle = isRosa ? '#ff80c0' : '#fff';
+      ctx.beginPath(); ctx.arc(x + i, y - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(x + i - 1, y - 5, 2, 2);
+    }
+  } else if (p.type === 'jardin_block') {
+    // Bloque de juguete colorido con letra (Jardín)
+    // Color rotativo según posición
+    const colors = ['#d32f2f', '#ffd700', '#3a9ad6', '#4a9c3a', '#aa3399', '#ff8800'];
+    const colorIdx = Math.floor((p.x / 60)) % colors.length;
+    const baseCol = colors[(colorIdx + colors.length) % colors.length];
+    ctx.fillStyle = baseCol;
+    ctx.fillRect(x, y, p.w, p.h);
+    // Top más claro
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x, y, p.w, 6);
+    // Borde redondeado oscuro
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, p.w - 2, p.h - 2);
+    // Letras grandes (cada ~50px)
+    const letters = ['A', 'B', 'C', '1', '2', '3'];
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 25; i < p.w; i += 50) {
+      const lt = letters[(Math.floor(p.x / 50) + Math.floor(i / 50)) % letters.length];
+      ctx.fillText(lt, x + i, y + p.h / 2);
+    }
+    // Línea separadora abajo
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(x, y + p.h - 4, p.w, 2);
+  } else if (p.type === 'wood_old') {
+    // Madera vieja (Pinocho) — marrón con vetas y clavos
+    ctx.fillStyle = '#7a4f2a';
+    ctx.fillRect(x, y, p.w, p.h);
+    ctx.fillStyle = '#a0703a';
+    ctx.fillRect(x, y, p.w, 5);
+    // Vetas onduladas
+    ctx.strokeStyle = '#4a2f1a';
+    ctx.lineWidth = 1;
+    for (let i = 10; i < p.w; i += 22) {
+      ctx.beginPath();
+      ctx.moveTo(x + i, y + 6);
+      ctx.bezierCurveTo(x + i + 4, y + p.h / 3, x + i - 2, y + 2 * p.h / 3, x + i + 3, y + p.h - 2);
+      ctx.stroke();
+    }
+    // Tablones verticales
+    ctx.strokeStyle = '#3a1f0a';
+    ctx.lineWidth = 1.5;
+    for (let i = 30; i < p.w; i += 36) {
+      ctx.beginPath();
+      ctx.moveTo(x + i, y + 5);
+      ctx.lineTo(x + i, y + p.h);
+      ctx.stroke();
+    }
+    // Clavos brillantes
+    ctx.fillStyle = '#888';
+    for (let i = 10; i < p.w; i += 36) {
+      ctx.beginPath(); ctx.arc(x + i, y + 8, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + i, y + p.h - 6, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#d0d0d0';
+    for (let i = 10; i < p.w; i += 36) {
+      ctx.fillRect(x + i - 1, y + 7, 1, 1);
+    }
+  } else if (p.type === 'cloud') {
+    // Nube esponjosa (Ave)
+    ctx.save();
+    // Base blanca redonda
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(x + p.w / 2, y + p.h / 2, p.w / 2 + 4, p.h / 2 + 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Pompones laterales
+    ctx.beginPath();
+    ctx.arc(x + 14, y + p.h / 2, p.h / 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + p.w - 14, y + p.h / 2, p.h / 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + p.w / 2, y, p.h / 1.4, 0, Math.PI * 2); ctx.fill();
+    // Sombrita
+    ctx.fillStyle = 'rgba(200, 220, 240, 0.6)';
+    ctx.fillRect(x + 4, y + p.h - 5, p.w - 8, 4);
+    // Brillito
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(x + 20, y + 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   } else {
     // Plataforma de madera con pasto
     ctx.fillStyle = '#8b6139';
@@ -5934,6 +8684,40 @@ function drawHazard(h) {
     for (let i = 2; i < h.w; i += 10) {
       ctx.fillRect(x + i, h.y + h.h - 8, 2, 8);
     }
+  } else if (h.type === 'water_swim') {
+    // Agua nadable (Mundo 16 Ave) — no daña, cambia physics del player
+    ctx.save();
+    // Capa principal azul translúcida
+    const grad = ctx.createLinearGradient(0, h.y, 0, h.y + h.h);
+    grad.addColorStop(0, 'rgba(80, 160, 230, 0.55)');
+    grad.addColorStop(1, 'rgba(30, 80, 180, 0.75)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, h.y, h.w, h.h);
+    // Superficie con olitas
+    ctx.fillStyle = 'rgba(200, 230, 255, 0.7)';
+    for (let i = 0; i < h.w; i += 8) {
+      const wv = Math.sin((i + game.time * 60) * 0.1) * 2;
+      ctx.fillRect(x + i, h.y - 2 + wv, 6, 3);
+    }
+    // Línea blanca de superficie
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 0; i < h.w; i += 3) {
+      ctx.fillRect(x + i, h.y, 2, 1);
+    }
+    // Burbujas subiendo
+    for (let i = 0; i < h.w; i += 28) {
+      const phase = (game.time * 0.6 + i * 0.05) % 1;
+      const by = h.y + h.h - phase * h.h;
+      const r = 2 + (i % 3);
+      ctx.fillStyle = 'rgba(220, 240, 255, 0.6)';
+      ctx.beginPath(); ctx.arc(x + i + 10, by, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // Reflejos en superficie
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for (let i = 8; i < h.w; i += 36) {
+      ctx.fillRect(x + i, h.y + 2, 6, 1);
+    }
+    ctx.restore();
   }
 }
 
@@ -6192,7 +8976,7 @@ function gameLoop(now) {
       }
     }
 
-    // Monedas (cualquier player vivo puede recogerlas)
+    // Monedas (cualquier player vivo puede recogerlas) — plata duplica el valor
     for (const c of game.coins) c.update(dt);
     for (const c of game.coins) {
       if (c.collected) continue;
@@ -6201,9 +8985,12 @@ function gameLoop(now) {
         if (player.x < c.x + c.w && player.x + player.w > c.x &&
             player.y < c.y + c.h && player.y + player.h > c.y) {
           c.collected = true;
-          game.score++;
+          const mult = (player.plataTime > 0) ? 2 : 1;
+          game.score += mult;
+          // Color de partículas: plateado si plata está activa
+          const pc = (player.plataTime > 0) ? '#d0d0e0' : '#ffd700';
           for (let i = 0; i < 10; i++)
-            game.particles.push(new Particle(c.x + c.w/2, c.y + c.h/2, '#ffd700'));
+            game.particles.push(new Particle(c.x + c.w/2, c.y + c.h/2, pc));
           break;
         }
       }
@@ -6220,7 +9007,17 @@ function gameLoop(now) {
           pw.collected = true;
           applyPowerUp(pw.type, player);
           // burst de partículas según color
-          const colorMap = { star: '#ffd700', mushroom: '#d3002c', feather: '#3a9ad6', turbo: '#ff8800', tiny: '#2d8f3e', shield: '#66c8ff', punch: '#ff3333', shield_strong: '#1a5a8a', fireball: '#ff6600', torpedo: '#88d4ff', fart: '#8fc97a', super_jump: '#a060ff', lightning: '#a0ff60', teleport: '#a0ff60', biscuit: '#e87020' };
+          const colorMap = {
+            star: '#ffd700', mushroom: '#d3002c', feather: '#3a9ad6', turbo: '#ff8800',
+            tiny: '#2d8f3e', shield: '#66c8ff', punch: '#ff3333', shield_strong: '#1a5a8a',
+            fireball: '#ff6600', torpedo: '#88d4ff', fart: '#8fc97a', super_jump: '#a060ff',
+            lightning: '#a0ff60', teleport: '#a0ff60', biscuit: '#e87020',
+            // Mundos 13-16
+            electricidad: '#ffeb00', chorro_agua: '#3a9ad6', fuego_pkmn: '#ff6600', plata: '#c0c0d0',
+            cuarto_salto: '#ff8800', cinco_saltos: '#ff44aa', mega_rapido: '#ffd700', bola_nieve: '#ffffff',
+            torpedo_super: '#a0a0a0', mega_salto: '#ffd700', super_pedo: '#6fa050',
+            submarino: '#88d4ff', picar: '#ffaa44', volar: '#ffffff',
+          };
           const col = colorMap[pw.type] || '#ffffff';
           for (let i = 0; i < 16; i++)
             game.particles.push(new Particle(pw.x + pw.w/2, pw.y + pw.h/2, col));
@@ -6372,6 +9169,8 @@ function gameLoop(now) {
         for (const e of game.enemies) {
           if (e.defeated) continue;
           if (e.invuln > 0) continue;
+          // Pierce: no volver a golpear al mismo enemigo
+          if (pr.pierce && pr.hitEnemies && pr.hitEnemies.has(e)) continue;
           if (pr.x < e.x + e.w && pr.x + pr.w > e.x &&
               pr.y < e.y + e.h && pr.y + pr.h > e.y) {
             // Si es RobotBoss, sólo daña en las patas (mismo criterio que el puñetazo)
@@ -6392,6 +9191,11 @@ function gameLoop(now) {
               e.invuln = e.isBoss ? 1.0 : 0.5;
               for (let i = 0; i < 8; i++)
                 game.particles.push(new Particle(e.x + e.w/2, e.y + 10, '#ffcc00'));
+            }
+            // Pierce: registra el hit y NO se destruye el proyectil
+            if (pr.pierce && pr.hitEnemies) {
+              pr.hitEnemies.add(e);
+              continue;
             }
             pr.life = 0;
             break;
@@ -6438,6 +9242,8 @@ function gameLoop(now) {
 
     // Hazards (lava / pinchos / autos) — cada player se chequea individual
     for (const h of game.hazards) {
+      // water_swim NO daña — la física la maneja Player.update via inWater
+      if (h.type === 'water_swim') continue;
       for (const player of game.players) {
         if (player.eliminated) continue;
         if (!(player.x < h.x + h.w && player.x + player.w > h.x &&
