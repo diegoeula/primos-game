@@ -316,6 +316,29 @@
   .level-btn:active { transform: scale(0.97); }
   .level-btn .level-num { color: #ffd700; margin-right: 6px; }
 
+  /* Selector de velocidad del juego */
+  #speed-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .speed-btn {
+    background: #4a7ca8;
+    color: #fff;
+    border: 2px solid #2a4a68;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.05s;
+  }
+  .speed-btn:hover { background: #6ea4d4; }
+  .speed-btn:active { transform: scale(0.95); }
+  .speed-btn.selected {
+    background: #ffd700;
+    color: #1a1a2e;
+    border-color: #d4a800;
+    box-shadow: 0 0 6px #ffd700;
+  }
+
   /* Color buttons para personalización del personaje */
   .color-btn {
     width: 36px;
@@ -406,6 +429,14 @@
         <div id="color-pants"></div>
       </div>
       <canvas id="preview-canvas" width="80" height="110" style="margin: 10px auto; display: block; image-rendering: pixelated; background: rgba(255,255,255,0.1); border-radius: 8px;"></canvas>
+      <div class="modal-row">
+        <label>Velocidad:</label>
+        <div id="speed-row">
+          <button class="speed-btn" data-speed="0.7">🐢 Lento</button>
+          <button class="speed-btn" data-speed="1.0">🚶 Normal</button>
+          <button class="speed-btn" data-speed="1.3">🚀 Rápido</button>
+        </div>
+      </div>
       <div style="margin-top: 16px;">
         <button class="modal-btn" id="menu-play">▶ 1 Jugador</button>
         <button class="modal-btn" id="menu-play-2p">👥 2 Jugadores</button>
@@ -7007,6 +7038,7 @@ const SAVE_KEY = 'nacho:maxLevelUnlocked';
 const PREF_PROFILE = 'nacho:profile';     // nombre + colores del personaje
 const PREF_KEYBINDS = 'nacho:keybinds';   // teclas configurables
 const PREF_RANKING = 'nacho:ranking';     // top 10 scores
+const PREF_SPEED = 'nacho:gameSpeed';     // 0.7 / 1.0 / 1.3 — multiplicador global de velocidad
 
 // Helpers genéricos para leer/escribir prefs (JSON, con fallback si falla)
 function savePref(key, val) {
@@ -7047,6 +7079,7 @@ window.resetNachoTodo = () => {
   localStorage.removeItem(PREF_PROFILE);
   localStorage.removeItem(PREF_KEYBINDS);
   localStorage.removeItem(PREF_RANKING);
+  localStorage.removeItem(PREF_SPEED);
   location.reload();
 };
 
@@ -8977,12 +9010,42 @@ canvas.addEventListener('touchstart', (e) => {
 
 // ============ GAME LOOP ============
 let lastTime = 0;
+// Velocidad global del juego (0.7 = Lento, 1.0 = Normal, 1.3 = Rápido).
+// Persistido en localStorage. El loop corre ~gameSpeed "ticks" por frame (acumulador),
+// así escalan parejo tanto las cosas dt-driven (timers) como las velocidad-fija (enemigos/proyectiles).
+let gameSpeed = loadPref(PREF_SPEED, 1.0);
+if (typeof gameSpeed !== 'number' || gameSpeed < 0.5 || gameSpeed > 2.0) gameSpeed = 1.0;
+let speedAccumulator = 0;
+
 function gameLoop(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
-  game.time += dt;
 
   if (game.state === 'playing' && !game.paused) {
+    speedAccumulator += gameSpeed;
+    // Máximo 3 ticks por frame (evita "catch-up" descontrolado si el browser frena)
+    const ticks = Math.min(3, Math.floor(speedAccumulator));
+    speedAccumulator -= ticks;
+    for (let _t = 0; _t < ticks; _t++) {
+      gameUpdate(dt);
+    }
+  } else {
+    // Fuera de "playing": acumulador se resetea para no acumular durante pausa/menú/won/lost
+    speedAccumulator = 0;
+    game.time += dt; // sigue avanzando para animaciones decorativas (monedas demo del menú, etc.)
+  }
+
+  // ===== DRAW (siempre 1 vez por frame, incluso en pausa/menu) =====
+  gameDraw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Update: corre N veces por frame según gameSpeed (acumulador).
+// Nota: game.time se incrementa adentro para que también escale con la velocidad.
+function gameUpdate(dt) {
+  game.time += dt;
+  {
     // Actualizar plataformas móviles (antes que el player, así hereda el movimiento)
     for (const p of game.platforms) {
       if (p.type === 'moving') {
@@ -9371,8 +9434,11 @@ function gameLoop(now) {
     for (const p of game.particles) p.update(dt);
     game.particles = game.particles.filter(p => p.life > 0);
   }
+}
 
-  // ===== DRAW =====
+// ============ DRAW ============
+// Corre siempre 1 vez por frame, independiente de gameSpeed
+function gameDraw() {
   drawBackground();
   for (const h of game.hazards) drawHazard(h);
   for (const p of game.platforms) drawPlatform(p);
@@ -9421,8 +9487,6 @@ function gameLoop(now) {
     msg.innerHTML = '💀 ¡BOWSER GANÓ!<small>Tocá para reintentar</small>';
     msg.style.display = 'block';
   }
-
-  requestAnimationFrame(gameLoop);
 }
 
 // ============ MENÚ + PERFIL ============
@@ -9509,6 +9573,7 @@ function showMenu() {
   buildColorRow('color-shirt', SHIRT_COLORS, 'shirtColor');
   buildColorRow('color-pants', PANTS_COLORS, 'pantsColor');
   drawPreview();
+  if (typeof refreshSpeedButtons === 'function') refreshSpeedButtons();
   game.state = 'menu';
 }
 function hideMenu() {
@@ -9590,6 +9655,26 @@ document.getElementById('menu-play-2p').addEventListener('click', (e) => {
   // Siempre empezamos desde el Mundo 1 (Nivel 1)
   createLevel(0);
 });
+// Velocidad del juego — botones del menú
+function setGameSpeed(s) {
+  gameSpeed = s;
+  savePref(PREF_SPEED, s);
+  refreshSpeedButtons();
+}
+function refreshSpeedButtons() {
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    const v = parseFloat(btn.dataset.speed);
+    btn.classList.toggle('selected', Math.abs(v - gameSpeed) < 0.01);
+  });
+}
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setGameSpeed(parseFloat(btn.dataset.speed));
+  });
+});
+refreshSpeedButtons();
+
 document.getElementById('menu-levels').addEventListener('click', (e) => { e.stopPropagation(); showLevelsModal(); });
 document.getElementById('menu-keybinds').addEventListener('click', (e) => { e.stopPropagation(); showKeybinds(); });
 document.getElementById('menu-ranking').addEventListener('click', (e) => { e.stopPropagation(); showRanking(); });
