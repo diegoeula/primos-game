@@ -102,6 +102,7 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
 - [x] **Fase 23 — Mundo 14 Jardín** (N26-N27): aula + Mochila/NeneSaltando + Maestra + cuarto_salto/cinco_saltos/mega_rapido/bola_nieve + vidas crayón
 - [x] **Fase 24 — Mundo 15 Pinocho** (N28-N29): taller + CaballoJuguete + PinochoBoss + torpedo_super/mega_salto/super_pedo + vidas nariz
 - [x] **Fase 25 — Mundo 16 Ave** (N30-N31): cielo+árbol+agua nadable + Avestruz/PinguinoAgua + Loro + submarino/picar/volar + vidas huevo
+- [x] **Fase 26 — Selector de niveles + rename a Primos Game v3**: modal con 31 niveles agrupados por 16 mundos (todos abiertos) + title/banner/header renombrados; localStorage sigue con prefijo `nacho:` (no se pierde progreso)
 
 ---
 

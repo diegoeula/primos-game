@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0d2818">
-<title>Nacho en la Jungla</title>
+<title>Primos Game v3</title>
 <style>
   * { box-sizing: border-box; touch-action: manipulation; }
   html, body { width: 100%; height: 100%; }
@@ -274,6 +274,48 @@
   }
   .mini-btn:active { transform: scale(0.95); }
 
+  /* Selector de niveles */
+  #levels-modal .modal-box {
+    max-width: 720px;
+    width: 90%;
+    max-height: 85vh;
+  }
+  .levels-world-section { margin: 14px 0; text-align: left; }
+  .levels-world-title {
+    margin: 12px 0 6px 0;
+    font-size: clamp(15px, 2.2vw, 20px);
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    border-bottom: 2px solid rgba(255,215,0,0.4);
+    padding-bottom: 4px;
+  }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin: 4px 0 8px 0;
+  }
+  @media (max-width: 480px) {
+    .level-grid { grid-template-columns: 1fr; }
+  }
+  .level-btn {
+    background: #4a7ca8;
+    color: #fff;
+    border: 2px solid #2a4a68;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: clamp(12px, 1.7vw, 15px);
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: transform 0.05s;
+  }
+  .level-btn:hover { background: #6ea4d4; border-color: #ffd700; }
+  .level-btn:active { transform: scale(0.97); }
+  .level-btn .level-num { color: #ffd700; margin-right: 6px; }
+
   /* Color buttons para personalización del personaje */
   .color-btn {
     width: 36px;
@@ -321,7 +363,7 @@
     <div class="top-btn" id="btn-home" title="Menú">🏠</div>
   </div>
   <div id="title" class="hide">
-    NACHO<br>EN LA JUNGLA
+    PRIMOS<br>GAME v3
     <small>Tocá para empezar<br>(← → para moverte, ↑ o espacio para saltar)</small>
     <div style="margin-top: 20px;">
       <button class="mini-btn" id="btn-ranking-title">🏆 Ranking</button>
@@ -345,7 +387,7 @@
   <!-- Menú Principal -->
   <div id="menu" class="modal">
     <div class="modal-box">
-      <h2>🦖 NACHO</h2>
+      <h2>🦖 PRIMOS GAME v3</h2>
       <div style="opacity: 0.8; margin-bottom: 16px;">¡Elegí tu personaje y jugá!</div>
       <div class="modal-row">
         <label>Nombre:</label>
@@ -369,6 +411,7 @@
         <button class="modal-btn" id="menu-play-2p">👥 2 Jugadores</button>
       </div>
       <div>
+        <button class="modal-btn secondary" id="menu-levels">🗺️ Niveles</button>
         <button class="modal-btn secondary" id="menu-keybinds">⚙ Teclas</button>
         <button class="modal-btn secondary" id="menu-ranking">🏆 Ranking</button>
         <button class="modal-btn secondary" id="menu-reset">🔄 Reiniciar progreso</button>
@@ -404,6 +447,16 @@
         <button class="modal-btn secondary" id="keybinds-reset">🔄 Restablecer</button>
         <button class="modal-btn" id="keybinds-close">Listo</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Selector de Niveles -->
+  <div id="levels-modal" class="modal hide">
+    <div class="modal-box">
+      <h2>🗺️ Niveles</h2>
+      <div style="opacity:0.8;font-size:0.85em;margin-bottom:8px;">Elegí cualquier mundo y nivel. ¡Todos están abiertos!</div>
+      <div id="levels-body"></div>
+      <button class="modal-btn" id="levels-close">Cerrar</button>
     </div>
   </div>
   <!-- Cierra el #wrap acá -->
@@ -9462,6 +9515,57 @@ function hideMenu() {
   document.getElementById('menu').classList.add('hide');
 }
 
+// ===== Selector de niveles (modal) =====
+// Construye el modal agrupando los LEVELS por su `world`,
+// usando WORLD_META para el emoji + número + nombre.
+function populateLevelsModal() {
+  const body = document.getElementById('levels-body');
+  if (!body) return;
+  // Agrupar niveles por world en orden de aparición
+  const order = [];
+  const groups = {};
+  for (let i = 0; i < LEVELS.length; i++) {
+    const w = LEVELS[i].world || 'jungla';
+    if (!groups[w]) { groups[w] = []; order.push(w); }
+    groups[w].push({ idx: i, name: LEVELS[i].name });
+  }
+  // Build HTML
+  let html = '';
+  for (const w of order) {
+    const meta = WORLD_META[w] || { num: '?', emoji: '❓', name: w };
+    html += `<div class="levels-world-section">`;
+    html += `<div class="levels-world-title">${meta.emoji} Mundo ${meta.num} · ${meta.name}</div>`;
+    html += `<div class="level-grid">`;
+    for (const lv of groups[w]) {
+      // El nombre del nivel viene como "Mundo — Nombre", nos quedamos con la parte después del em-dash si existe
+      const shortName = lv.name.includes('—') ? lv.name.split('—').slice(1).join('—').trim() : lv.name;
+      html += `<button class="level-btn" data-level="${lv.idx}"><span class="level-num">N${lv.idx + 1}</span>${shortName}</button>`;
+    }
+    html += `</div></div>`;
+  }
+  body.innerHTML = html;
+  // Adjuntar listeners a cada botón
+  body.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.level, 10);
+      if (isNaN(idx)) return;
+      hideLevelsModal();
+      hideMenu();
+      // Si no se eligió modo todavía, default a 1 jugador
+      if (!game.mode) game.mode = '1p';
+      createLevel(idx);
+    });
+  });
+}
+function showLevelsModal() {
+  populateLevelsModal();
+  document.getElementById('levels-modal').classList.remove('hide');
+}
+function hideLevelsModal() {
+  document.getElementById('levels-modal').classList.add('hide');
+}
+
 // Colores del perfil actual para pasarle al Player al crearlo
 function profileToColors(p) {
   return { capColor: p.capColor, shirtColor: p.shirtColor, pantsColor: p.pantsColor };
@@ -9486,6 +9590,7 @@ document.getElementById('menu-play-2p').addEventListener('click', (e) => {
   // Siempre empezamos desde el Mundo 1 (Nivel 1)
   createLevel(0);
 });
+document.getElementById('menu-levels').addEventListener('click', (e) => { e.stopPropagation(); showLevelsModal(); });
 document.getElementById('menu-keybinds').addEventListener('click', (e) => { e.stopPropagation(); showKeybinds(); });
 document.getElementById('menu-ranking').addEventListener('click', (e) => { e.stopPropagation(); showRanking(); });
 document.getElementById('menu-reset').addEventListener('click', (e) => {
@@ -9493,6 +9598,10 @@ document.getElementById('menu-reset').addEventListener('click', (e) => {
   if (confirm('¿Seguro que querés reiniciar todo el progreso? (perfil, niveles, ranking y teclas)')) {
     resetNachoTodo();
   }
+});
+document.getElementById('levels-close').addEventListener('click', (e) => { e.stopPropagation(); hideLevelsModal(); });
+document.getElementById('levels-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'levels-modal') hideLevelsModal();
 });
 
 // ===== INIT: restaurar progreso guardado + mostrar menú =====
