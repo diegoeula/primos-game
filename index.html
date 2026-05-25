@@ -432,9 +432,10 @@
       <div class="modal-row">
         <label>Velocidad:</label>
         <div id="speed-row">
-          <button class="speed-btn" data-speed="0.7">🐢 Lento</button>
+          <button class="speed-btn" data-speed="0.4">🐌 Muy Lento</button>
+          <button class="speed-btn" data-speed="0.6">🐢 Lento</button>
           <button class="speed-btn" data-speed="1.0">🚶 Normal</button>
-          <button class="speed-btn" data-speed="1.3">🚀 Rápido</button>
+          <button class="speed-btn" data-speed="1.4">🚀 Rápido</button>
         </div>
       </div>
       <div style="margin-top: 16px;">
@@ -9014,7 +9015,12 @@ let lastTime = 0;
 // Persistido en localStorage. El loop corre ~gameSpeed "ticks" por frame (acumulador),
 // así escalan parejo tanto las cosas dt-driven (timers) como las velocidad-fija (enemigos/proyectiles).
 let gameSpeed = loadPref(PREF_SPEED, 1.0);
-if (typeof gameSpeed !== 'number' || gameSpeed < 0.5 || gameSpeed > 2.0) gameSpeed = 1.0;
+if (typeof gameSpeed !== 'number' || gameSpeed < 0.3 || gameSpeed > 2.0) gameSpeed = 1.0;
+// Si tiene un valor guardado que no matchea ningún preset (ej. 0.7 viejo), lo redondeo al más cercano
+const _validSpeeds = [0.4, 0.6, 1.0, 1.4];
+if (!_validSpeeds.some(v => Math.abs(v - gameSpeed) < 0.01)) {
+  gameSpeed = _validSpeeds.reduce((best, v) => Math.abs(v - gameSpeed) < Math.abs(best - gameSpeed) ? v : best, 1.0);
+}
 let speedAccumulator = 0;
 
 function gameLoop(now) {
