@@ -103,7 +103,14 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
 - [x] **Fase 24 — Mundo 15 Pinocho** (N28-N29): taller + CaballoJuguete + PinochoBoss + torpedo_super/mega_salto/super_pedo + vidas nariz
 - [x] **Fase 25 — Mundo 16 Ave** (N30-N31): cielo+árbol+agua nadable + Avestruz/PinguinoAgua + Loro + submarino/picar/volar + vidas huevo
 - [x] **Fase 26 — Selector de niveles + rename a Primos Game v3**: modal con 31 niveles agrupados por 16 mundos (todos abiertos) + title/banner/header renombrados; localStorage sigue con prefijo `nacho:` (no se pierde progreso)
-- [x] **Fase 27 — Velocidad regulable del juego**: 3 botones en el menú (🐢 Lento 0.7x / 🚶 Normal 1.0x / 🚀 Rápido 1.3x) persistidos en `nacho:gameSpeed`. Implementado con acumulador de ticks en `gameLoop` (escala parejo todo: timers, físicas, enemigos, proyectiles, partículas, plataformas móviles). Split de `gameLoop` en `gameUpdate(dt)` + `gameDraw()`.
+- [x] **Fase 27 — Velocidad regulable del juego**: 4 botones en el menú (🐌 Muy Lento 0.4x / 🐢 Lento 0.6x / 🚶 Normal 1.0x / 🚀 Rápido 1.4x) persistidos en `nacho:gameSpeed`. Implementado con acumulador de ticks en `gameLoop` (escala parejo todo: timers, físicas, enemigos, proyectiles, partículas, plataformas móviles). Split de `gameLoop` en `gameUpdate(dt)` + `gameDraw()`.
+- [x] **Fase 28 — Wallet + Tienda + Inventario + Pausa con menú + Bonus**: combo de 4 features:
+  - **Wallet persistente** (`nacho:wallet`): monedas se acumulan entre sesiones. Display 💰 en HUD, menú principal, pausa y tienda.
+  - **Tienda** (`#shop-modal`): 6 power-ups comprables (estrella, hongo, pluma, turbo, chiquito, escudo) con precios fijos en monedas; acceso desde menú principal y pausa.
+  - **Inventario** (`#inventory-modal`, `nacho:inventory`): los power-ups comprados se guardan; se usan con "Usar" desde el modal (disponible en pausa).
+  - **Pausa con menú** (`#pause-modal`): al pausar (ESC o ⏸) aparece un modal con Continuar / Tienda / Inventario / Cambiar nivel / Menú principal. La pantalla queda jugable visualmente detrás.
+  - **Navegación con teclado**: ↑/↓ mueven foco entre botones del modal abierto, Enter activa. Las teclas de movimiento se limpian al abrir cualquier modal (no quedan "pegadas").
+  - **Sala bonus** en los 16 niveles de jefe: puerta dorada cerca del spawn, teletransporta a una sala con 25+ monedas; volvés solo al juntar todas o pasados 25s. Snapshot/restore del estado del nivel.
 
 ---
 

@@ -339,6 +339,102 @@
     box-shadow: 0 0 6px #ffd700;
   }
 
+  /* Tienda y pausa modal */
+  #shop-modal .modal-box, #pause-modal .modal-box { max-width: 720px; width: 90%; max-height: 85vh; }
+  .wallet-bar {
+    background: rgba(255,215,0,0.15);
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 8px 0 14px 0;
+    font-size: clamp(15px, 2.2vw, 19px);
+    font-weight: bold;
+    color: #ffd700;
+  }
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin: 8px 0;
+  }
+  @media (max-width: 480px) { .shop-grid { grid-template-columns: 1fr; } }
+  .shop-item {
+    background: rgba(255,255,255,0.06);
+    border: 2px solid #4a7ca8;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .shop-item .shop-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 1.05em;
+  }
+  .shop-item .shop-emoji { font-size: 1.6em; }
+  .shop-item .shop-desc { opacity: 0.85; font-size: 0.85em; }
+  .shop-item .shop-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .shop-item .shop-price {
+    background: #ffd700;
+    color: #1a1a2e;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .shop-buy-btn {
+    background: #2d8f3e;
+    color: #fff;
+    border: 2px solid #1a5a25;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .shop-buy-btn:hover { background: #3eaf4e; border-color: #ffd700; }
+  .shop-buy-btn:disabled {
+    background: #555;
+    color: #999;
+    border-color: #333;
+    cursor: not-allowed;
+  }
+  .shop-use-btn {
+    background: #4a7ca8;
+    color: #fff;
+    border: 2px solid #2a4a68;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .shop-use-btn:hover { background: #6ea4d4; border-color: #ffd700; }
+  .shop-use-btn:disabled {
+    background: #555;
+    color: #999;
+    border-color: #333;
+    cursor: not-allowed;
+  }
+  .shop-inv-count {
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.9em;
+  }
+  .modal-btn:focus, .speed-btn:focus, .level-btn:focus, .shop-buy-btn:focus, .shop-use-btn:focus, .color-btn:focus {
+    outline: 3px solid #ffd700;
+    outline-offset: 2px;
+  }
+
   /* Color buttons para personalización del personaje */
   .color-btn {
     width: 36px;
@@ -378,6 +474,7 @@
   <div id="hud">
     <div><span id="world-display">🌴 Mundo 1 · Jungla</span></div>
     <div>🪙 <span id="score">0</span>/<span id="total">0</span></div>
+    <div>💰 <span id="wallet-hud">0</span></div>
     <div>🎮 Nivel <span id="level">1</span>/<span id="total-levels">1</span></div>
     <div><span id="lives">❤️❤️❤️</span></div>
   </div>
@@ -444,6 +541,7 @@
       </div>
       <div>
         <button class="modal-btn secondary" id="menu-levels">🗺️ Niveles</button>
+        <button class="modal-btn secondary" id="menu-shop">🛒 Tienda <small style="opacity:0.8;">(💰 <span id="wallet-menu">0</span>)</small></button>
         <button class="modal-btn secondary" id="menu-keybinds">⚙ Teclas</button>
         <button class="modal-btn secondary" id="menu-ranking">🏆 Ranking</button>
         <button class="modal-btn secondary" id="menu-reset">🔄 Reiniciar progreso</button>
@@ -489,6 +587,47 @@
       <div style="opacity:0.8;font-size:0.85em;margin-bottom:8px;">Elegí cualquier mundo y nivel. ¡Todos están abiertos!</div>
       <div id="levels-body"></div>
       <button class="modal-btn" id="levels-close">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Modal Tienda -->
+  <div id="shop-modal" class="modal hide">
+    <div class="modal-box">
+      <h2>🛒 Tienda</h2>
+      <div class="wallet-bar">💰 Tenés <span id="wallet-shop">0</span> monedas</div>
+      <div style="opacity:0.8;font-size:0.85em;margin-bottom:4px;">Comprá power-ups, después usalos cuando los necesites desde el inventario (botón en pausa).</div>
+      <div id="shop-body" class="shop-grid"></div>
+      <button class="modal-btn" id="shop-close">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Modal Pausa -->
+  <div id="pause-modal" class="modal hide">
+    <div class="modal-box">
+      <h2>⏸ Pausa</h2>
+      <div class="wallet-bar">💰 <span id="wallet-pause">0</span> monedas</div>
+      <div>
+        <button class="modal-btn" id="pause-resume">▶ Continuar</button>
+      </div>
+      <div>
+        <button class="modal-btn secondary" id="pause-shop">🛒 Tienda</button>
+        <button class="modal-btn secondary" id="pause-inventory">🎒 Inventario</button>
+      </div>
+      <div>
+        <button class="modal-btn secondary" id="pause-levels">🗺️ Cambiar nivel</button>
+        <button class="modal-btn secondary" id="pause-menu">🏠 Menú principal</button>
+      </div>
+      <div style="opacity:0.6;font-size:0.8em;margin-top:10px;">Tip: ↑ ↓ para moverte entre botones · Enter para elegir</div>
+    </div>
+  </div>
+
+  <!-- Modal Inventario -->
+  <div id="inventory-modal" class="modal hide">
+    <div class="modal-box">
+      <h2>🎒 Inventario</h2>
+      <div style="opacity:0.8;font-size:0.85em;margin-bottom:8px;">Power-ups que compraste. Tocá "Usar" para activarlo ahora.</div>
+      <div id="inventory-body" class="shop-grid"></div>
+      <button class="modal-btn" id="inventory-close">Cerrar</button>
     </div>
   </div>
   <!-- Cierra el #wrap acá -->
@@ -537,6 +676,10 @@ const game = {
   treasureReleased: false, // puerta secreta ya activó el tesoro en este nivel
   mode: '1p',          // 1p | 2p
   paused: false,       // pausa con ESC durante el juego
+  inBonusRoom: false,  // jugador está en sala bonus (puerta secreta de nivel de jefe)
+  bonusReturn: null,   // snapshot del nivel para restaurar al salir de la sala bonus
+  bonusTimer: 0,       // segundos restantes en la sala bonus
+  bonusInitialCoins: 0,// para detectar cuándo se juntaron todas las monedas
 };
 
 // ============ PLAYER (Nacho) ============
@@ -7040,6 +7183,8 @@ const PREF_PROFILE = 'nacho:profile';     // nombre + colores del personaje
 const PREF_KEYBINDS = 'nacho:keybinds';   // teclas configurables
 const PREF_RANKING = 'nacho:ranking';     // top 10 scores
 const PREF_SPEED = 'nacho:gameSpeed';     // 0.7 / 1.0 / 1.3 — multiplicador global de velocidad
+const PREF_WALLET = 'nacho:wallet';       // monedas acumuladas (persistente entre sesiones)
+const PREF_INVENTORY = 'nacho:inventory'; // {type: count} de power-ups comprados en la tienda
 
 // Helpers genéricos para leer/escribir prefs (JSON, con fallback si falla)
 function savePref(key, val) {
@@ -7051,6 +7196,111 @@ function loadPref(key, fallback) {
     if (raw == null) return fallback;
     return JSON.parse(raw);
   } catch { return fallback; }
+}
+
+// ============ SALA BONUS — niveles de jefe (último de cada mundo) ============
+// Para cada nivel de jefe, una puerta secreta dorada lleva a una sala con muchas
+// monedas. Volvés solo (cuando juntás todas o se acaba el timer) al nivel original.
+const BOSS_LEVEL_INDICES = [2, 5, 7, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+function isBossLevel(idx) { return BOSS_LEVEL_INDICES.includes(idx); }
+
+// Plataformas + monedas de la sala bonus (las mismas para todos los mundos por ahora).
+function getBonusPlatforms() {
+  return [
+    { x: 0, y: 450, w: 1200, h: 50, color: '#5c4030' },     // suelo de madera
+    { x: -20, y: 0, w: 20, h: 500, color: '#3a1f0a' },      // pared izq (invisible)
+    { x: 1200, y: 0, w: 20, h: 500, color: '#3a1f0a' },     // pared der (invisible)
+    { x: 120, y: 360, w: 140, h: 14, color: '#8a6040' },
+    { x: 320, y: 290, w: 160, h: 14, color: '#8a6040' },
+    { x: 540, y: 220, w: 160, h: 14, color: '#8a6040' },
+    { x: 760, y: 290, w: 160, h: 14, color: '#8a6040' },
+    { x: 960, y: 360, w: 140, h: 14, color: '#8a6040' },
+  ];
+}
+function generateBonusCoins() {
+  const coins = [];
+  // Fila baja (suelo)
+  for (let i = 0; i < 8; i++) coins.push(new Coin(80 + i * 130, 410));
+  // Sobre las plataformas (3 por plataforma)
+  const plats = [[180,330],[400,260],[620,190],[840,260],[1030,330]];
+  for (const [x, y] of plats) {
+    coins.push(new Coin(x - 30, y));
+    coins.push(new Coin(x, y));
+    coins.push(new Coin(x + 30, y));
+  }
+  // Algunas flotantes en el aire
+  for (let i = 0; i < 5; i++) coins.push(new Coin(200 + i * 180, 140));
+  return coins;
+}
+
+function enterBonusRoom() {
+  // Snapshot del nivel actual
+  game.bonusReturn = {
+    coins: game.coins,
+    powerups: game.powerups,
+    enemies: game.enemies,
+    projectiles: game.projectiles,
+    hazards: game.hazards,
+    doors: game.doors,
+    goal: game.goal,
+    platforms: game.platforms,
+    levelWidth: game.levelWidth,
+    cameraX: game.camera.x,
+    playerPositions: game.players.map(p => ({ x: p.x, y: p.y })),
+    goalLockedSnapshot: game.goalLocked,
+    treasureReleasedSnapshot: game.treasureReleased,
+    totalCoinsDisplay: parseInt(document.getElementById('total').textContent || '0', 10) || 0,
+    worldSnapshot: game.world,
+  };
+  // Reemplazar por sala bonus
+  game.coins = generateBonusCoins();
+  game.powerups = [];
+  game.enemies = [];
+  game.projectiles = [];
+  game.hazards = [];
+  game.doors = [];
+  game.goal = { x: -1000, y: 0, w: 0, h: 0 };
+  game.platforms = getBonusPlatforms();
+  game.levelWidth = 1200;
+  game.inBonusRoom = true;
+  game.bonusTimer = 25;
+  game.bonusInitialCoins = game.coins.length;
+  game.goalLocked = false;
+  for (let i = 0; i < game.players.length; i++) {
+    const p = game.players[i];
+    p.x = 60 + i * 40; p.y = 400; p.vx = 0; p.vy = 0;
+  }
+  game.camera.x = 0;
+  document.getElementById('total').textContent = game.coins.length;
+}
+
+function exitBonusRoom() {
+  if (!game.bonusReturn) return;
+  const r = game.bonusReturn;
+  game.coins = r.coins;
+  game.powerups = r.powerups;
+  game.enemies = r.enemies;
+  game.projectiles = r.projectiles;
+  game.hazards = r.hazards;
+  game.doors = r.doors;
+  game.goal = r.goal;
+  game.platforms = r.platforms;
+  game.levelWidth = r.levelWidth;
+  game.camera.x = r.cameraX;
+  game.goalLocked = r.goalLockedSnapshot;
+  game.treasureReleased = r.treasureReleasedSnapshot;
+  game.world = r.worldSnapshot;
+  for (let i = 0; i < game.players.length; i++) {
+    const pos = r.playerPositions[i];
+    if (!pos) continue;
+    // Volvemos un poco a la derecha del door para que no se vuelva a meter de una
+    game.players[i].x = pos.x + 80;
+    game.players[i].y = pos.y;
+    game.players[i].vx = 0; game.players[i].vy = 0;
+  }
+  game.inBonusRoom = false;
+  game.bonusReturn = null;
+  document.getElementById('total').textContent = r.totalCoinsDisplay;
 }
 
 function getUnlockedLevel() {
@@ -7074,15 +7324,61 @@ window.resetNacho = () => {
   localStorage.removeItem(PREF_RANKING);
   location.reload();
 };
-// Para resetear TODO (perfil, teclas, ranking, progreso): resetNachoTodo()
+// Para resetear TODO (perfil, teclas, ranking, progreso, wallet): resetNachoTodo()
 window.resetNachoTodo = () => {
   localStorage.removeItem(SAVE_KEY);
   localStorage.removeItem(PREF_PROFILE);
   localStorage.removeItem(PREF_KEYBINDS);
   localStorage.removeItem(PREF_RANKING);
   localStorage.removeItem(PREF_SPEED);
+  localStorage.removeItem(PREF_WALLET);
+  localStorage.removeItem(PREF_INVENTORY);
   location.reload();
 };
+
+// ============ WALLET + INVENTARIO (monedas persistentes + power-ups comprados) ============
+let wallet = loadPref(PREF_WALLET, 0);
+if (typeof wallet !== 'number' || wallet < 0) wallet = 0;
+let inventory = loadPref(PREF_INVENTORY, {});
+if (!inventory || typeof inventory !== 'object') inventory = {};
+
+function addToWallet(n) {
+  wallet = Math.max(0, wallet + n);
+  savePref(PREF_WALLET, wallet);
+  refreshWalletDisplays();
+}
+function spendFromWallet(n) {
+  if (wallet < n) return false;
+  wallet -= n;
+  savePref(PREF_WALLET, wallet);
+  refreshWalletDisplays();
+  return true;
+}
+function addToInventory(type, count = 1) {
+  inventory[type] = (inventory[type] || 0) + count;
+  savePref(PREF_INVENTORY, inventory);
+}
+function consumeFromInventory(type) {
+  if (!inventory[type] || inventory[type] <= 0) return false;
+  inventory[type]--;
+  if (inventory[type] === 0) delete inventory[type];
+  savePref(PREF_INVENTORY, inventory);
+  return true;
+}
+function refreshWalletDisplays() {
+  // Wallet en HUD
+  const hudW = document.getElementById('wallet-hud');
+  if (hudW) hudW.textContent = wallet;
+  // Wallet en menú
+  const menuW = document.getElementById('wallet-menu');
+  if (menuW) menuW.textContent = wallet;
+  // Wallet en tienda
+  const shopW = document.getElementById('wallet-shop');
+  if (shopW) shopW.textContent = wallet;
+  // Wallet en pausa
+  const pauseW = document.getElementById('wallet-pause');
+  if (pauseW) pauseW.textContent = wallet;
+}
 
 // ============ RANKING (top 10 local) ============
 // Criterio de orden: score (monedas) + nivel * 100 — premiar llegar lejos.
@@ -7157,6 +7453,19 @@ function createLevel(index = 0) {
   });
   // Puertas secretas del nivel (si las hay)
   game.doors = (cfg.doors || []).map(d => new SecretDoor(d.x, d.y, d.destX, d.destY, d.treasure || []));
+  // Puerta bonus: solo en niveles de jefe (último de cada mundo)
+  if (isBossLevel(index)) {
+    const sx = (cfg.playerStart && cfg.playerStart.x) || 50;
+    const sy = (cfg.playerStart && cfg.playerStart.y) || 380;
+    // La ponemos justo a la derecha del spawn, sobre el suelo, fácil de encontrar
+    const bonusDoor = new SecretDoor(sx + 150, sy - 8, 0, 0, []);
+    bonusDoor.isBonus = true;
+    game.doors.push(bonusDoor);
+  }
+  // Reset estado bonus por las dudas (cambio de nivel mientras estaba dentro)
+  game.inBonusRoom = false;
+  game.bonusReturn = null;
+  game.bonusTimer = 0;
   game.goal = { ...cfg.goal };
   // Jugador 1 con colores del perfil guardado
   game.player = new Player(cfg.playerStart.x, cfg.playerStart.y, { ...profileToColors(profile), playerIndex: 0 });
@@ -7183,6 +7492,7 @@ function createLevel(index = 0) {
   document.getElementById('total').textContent = game.coins.length;
   document.getElementById('level').textContent = index + 1;
   document.getElementById('total-levels').textContent = LEVELS.length;
+  refreshWalletDisplays();
   // Mundo en HUD (emoji + número + nombre)
   const wm = WORLD_META[game.world] || { num: '?', emoji: '❓', name: game.world };
   document.getElementById('world-display').textContent = `${wm.emoji} Mundo ${wm.num} · ${wm.name}`;
@@ -7191,6 +7501,8 @@ function createLevel(index = 0) {
   // Reset visual del botón de pausa
   const pb = document.getElementById('btn-pause');
   if (pb) pb.textContent = '⏸';
+  // Si veníamos desde la pausa (al cambiar nivel desde el modal), cerrar el modal de pausa
+  if (typeof hidePauseModal === 'function') hidePauseModal();
 }
 
 // Pasa al siguiente nivel si ganó, reintenta el mismo si perdió, empieza en el 1 si ganó el último
@@ -8594,6 +8906,28 @@ function drawGoal() {
   }
 }
 
+// Banner de sala bonus: arriba en el medio, con timer + ayuda
+function drawBonusOverlay() {
+  if (!game.inBonusRoom) return;
+  ctx.save();
+  // Fondo translúcido dorado
+  const w = 360, h = 60, x = (W - w) / 2, y = 14;
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.85)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#3a1f0a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, w, h);
+  // Texto
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#3a1f0a';
+  ctx.fillText('🎉 SALA BONUS 🎉', W / 2, y + 26);
+  ctx.font = 'bold 16px sans-serif';
+  const secs = Math.max(0, Math.ceil(game.bonusTimer));
+  ctx.fillText(`Quedan ${secs}s · ¡Juntá las monedas!`, W / 2, y + 48);
+  ctx.restore();
+}
+
 // Overlay de pausa: oscurece la pantalla y muestra "PAUSA" + ayuda
 function drawPauseOverlay() {
   if (!game.paused || game.state !== 'playing') return;
@@ -8824,6 +9158,37 @@ const keys2 = { left: false, right: false, jump: false, attack: false };
 // Alias para la mayor parte del código que todavía usa "keys"
 const keys = keys1;
 
+// Limpia todas las teclas de movimiento: lo llamamos al abrir cualquier modal
+// para que el personaje no quede "corriendo" cuando volvés al juego.
+function clearAllKeys() {
+  for (const k in keys1) keys1[k] = false;
+  for (const k in keys2) keys2[k] = false;
+}
+
+// ===== Navegación con teclado dentro de modales =====
+// ↑/↓ mueven el foco entre botones del modal abierto · Enter activa.
+// Listamos selectors de botones "navegables" por modal.
+function getOpenModal() {
+  const ids = ['pause-modal', 'shop-modal', 'inventory-modal', 'levels-modal', 'keybinds-modal', 'ranking-modal', 'menu'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && !el.classList.contains('hide')) return el;
+  }
+  return null;
+}
+function getModalButtons(modal) {
+  if (!modal) return [];
+  // Tomamos botones visibles (no disabled, no hidden)
+  const sel = 'button:not([disabled])';
+  return Array.from(modal.querySelectorAll(sel)).filter(b => b.offsetParent !== null);
+}
+function focusFirstModalButton() {
+  const m = getOpenModal();
+  if (!m) return;
+  const btns = getModalButtons(m);
+  if (btns.length) btns[0].focus();
+}
+
 // Nombre legible para mostrar una tecla en el modal
 function keyLabel(k) {
   if (k === ' ') return 'Espacio';
@@ -8880,9 +9245,19 @@ document.addEventListener('keydown', e => {
   // ESC: cierra modales abiertos o pausa/despausa el juego
   if (e.key === 'Escape') {
     e.preventDefault();
-    // Si hay un modal abierto, lo cerramos
+    // Si hay un modal abierto, lo cerramos en orden de prioridad (los anidados primero)
+    if (!document.getElementById('shop-modal').classList.contains('hide')) { hideShop(); return; }
+    if (!document.getElementById('inventory-modal').classList.contains('hide')) { hideInventory(); return; }
     if (!document.getElementById('ranking-modal').classList.contains('hide')) { hideRanking(); return; }
     if (!document.getElementById('keybinds-modal').classList.contains('hide')) { hideKeybinds(); return; }
+    if (!document.getElementById('levels-modal').classList.contains('hide')) { hideLevelsModal(); return; }
+    if (!document.getElementById('pause-modal').classList.contains('hide')) {
+      hidePauseModal();
+      game.paused = false;
+      const pb = document.getElementById('btn-pause');
+      if (pb) pb.textContent = '⏸';
+      return;
+    }
     // Si el menú principal está abierto, no hacemos nada (no se cierra con ESC para no romper el flow)
     if (!document.getElementById('menu').classList.contains('hide')) return;
     // Solo pausa si está jugando
@@ -8890,7 +9265,37 @@ document.addEventListener('keydown', e => {
       game.paused = !game.paused;
       const pb = document.getElementById('btn-pause');
       if (pb) pb.textContent = game.paused ? '▶' : '⏸';
+      if (game.paused) showPauseModal(); else hidePauseModal();
     }
+    return;
+  }
+
+  // ===== Navegación con teclado dentro de modales =====
+  const openModal = getOpenModal();
+  if (openModal) {
+    // ↑/↓: mover foco entre botones del modal
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const btns = getModalButtons(openModal);
+      if (btns.length) {
+        e.preventDefault();
+        const active = document.activeElement;
+        let idx = btns.indexOf(active);
+        if (idx === -1) idx = 0;
+        else idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length;
+        btns[idx].focus();
+      }
+      return;
+    }
+    // Enter/Espacio: activar botón con foco
+    if (e.key === 'Enter' || e.key === ' ') {
+      const active = document.activeElement;
+      if (active && active.tagName === 'BUTTON' && openModal.contains(active)) {
+        e.preventDefault();
+        active.click();
+        return;
+      }
+    }
+    // No procesar movimiento del juego mientras hay modal abierto
     return;
   }
 
@@ -8902,6 +9307,8 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('keyup', e => {
+  // Si hay modal abierto, no procesar (evita que se "peguen" teclas al cerrar)
+  if (getOpenModal()) return;
   applyKeyToKeys(e, false);
 });
 
@@ -8973,6 +9380,7 @@ document.getElementById('btn-pause').addEventListener('click', (e) => {
   if (game.state === 'playing') {
     game.paused = !game.paused;
     document.getElementById('btn-pause').textContent = game.paused ? '▶' : '⏸';
+    if (game.paused) showPauseModal(); else hidePauseModal();
   }
 });
 document.getElementById('btn-home').addEventListener('click', (e) => {
@@ -9109,6 +9517,7 @@ function gameUpdate(dt) {
           c.collected = true;
           const mult = (player.plataTime > 0) ? 2 : 1;
           game.score += mult;
+          addToWallet(mult);
           // Color de partículas: plateado si plata está activa
           const pc = (player.plataTime > 0) ? '#d0d0e0' : '#ffd700';
           for (let i = 0; i < 10; i++)
@@ -9157,6 +9566,14 @@ function gameUpdate(dt) {
         if (player.x < d.x + d.w && player.x + player.w > d.x &&
             player.y < d.y + d.h && player.y + player.h > d.y) {
           d.used = true;
+          // Sala bonus: en lugar de teletransportar, entramos a una sala con muchas monedas
+          if (d.isBonus) {
+            for (let i = 0; i < 24; i++) {
+              game.particles.push(new Particle(d.x + d.w / 2, d.y + d.h / 2, '#ffd700'));
+            }
+            enterBonusRoom();
+            break;
+          }
           // Teletransportar a TODOS los players vivos al destino (juntos cruzan)
           for (const p of game.players) {
             if (p.eliminated) continue;
@@ -9399,8 +9816,18 @@ function gameUpdate(dt) {
       }
     }
 
+    // Sala bonus: tick del timer + auto-salir (timer o todas las monedas juntadas)
+    if (game.inBonusRoom) {
+      game.bonusTimer -= dt;
+      const allCollected = game.coins.every(c => c.collected);
+      if (game.bonusTimer <= 0 || allCollected) {
+        exitBonusRoom();
+      }
+    }
+
     // Recalcular estado de bandera (si vencieron al último jefe, se desbloquea)
-    if (game.goalLocked && !game.enemies.some(e => e.isBoss && !e.defeated)) {
+    // Saltamos esto en sala bonus para no disparar el burst dorado falso.
+    if (!game.inBonusRoom && game.goalLocked && !game.enemies.some(e => e.isBoss && !e.defeated)) {
       game.goalLocked = false;
       // Burst dorado sobre la bandera al desbloquear
       for (let i = 0; i < 30; i++) {
@@ -9462,6 +9889,7 @@ function gameDraw() {
   for (const p of game.particles) p.draw(ctx);
   drawGoalHint();
   drawLevelBanner();
+  drawBonusOverlay();
   drawPauseOverlay();
 
   // HUD
@@ -9580,10 +10008,133 @@ function showMenu() {
   buildColorRow('color-pants', PANTS_COLORS, 'pantsColor');
   drawPreview();
   if (typeof refreshSpeedButtons === 'function') refreshSpeedButtons();
+  refreshWalletDisplays();
   game.state = 'menu';
 }
 function hideMenu() {
   document.getElementById('menu').classList.add('hide');
+}
+
+// ===== Tienda (modal) =====
+// Power-ups comprables con monedas del wallet. Después de comprar, van al inventario
+// y se usan desde ahí (botón "Usar" o desde la pausa).
+const SHOP_ITEMS = [
+  { type: 'star',     emoji: '⭐', name: 'Estrella',  price: 30, desc: 'Invencible 6 segundos' },
+  { type: 'mushroom', emoji: '🍄', name: 'Hongo',     price: 50, desc: 'Te da una vida extra' },
+  { type: 'feather',  emoji: '🪶', name: 'Pluma',     price: 20, desc: 'Doble salto' },
+  { type: 'turbo',    emoji: '💨', name: 'Turbo',     price: 15, desc: 'Corrés rapidísimo 5s' },
+  { type: 'tiny',     emoji: '🦎', name: 'Chiquito',  price: 15, desc: 'Te encogés 8 segundos' },
+  { type: 'shield',   emoji: '🛡️', name: 'Escudo',    price: 25, desc: 'Aguanta 1 golpe' },
+];
+
+function populateShop() {
+  const body = document.getElementById('shop-body');
+  if (!body) return;
+  let html = '';
+  for (const it of SHOP_ITEMS) {
+    const owned = inventory[it.type] || 0;
+    const canBuy = wallet >= it.price;
+    html += `<div class="shop-item">
+      <div class="shop-head"><span class="shop-emoji">${it.emoji}</span> ${it.name}</div>
+      <div class="shop-desc">${it.desc}</div>
+      <div class="shop-actions">
+        <span class="shop-price">💰 ${it.price}</span>
+        <button class="shop-buy-btn" data-type="${it.type}" ${canBuy ? '' : 'disabled'}>Comprar</button>
+        <span class="shop-inv-count">🎒 ${owned}</span>
+      </div>
+    </div>`;
+  }
+  body.innerHTML = html;
+  body.querySelectorAll('.shop-buy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const item = SHOP_ITEMS.find(i => i.type === type);
+      if (!item) return;
+      if (!spendFromWallet(item.price)) return;
+      addToInventory(item.type, 1);
+      populateShop();
+    });
+  });
+}
+
+function showShop() {
+  populateShop();
+  refreshWalletDisplays();
+  clearAllKeys();
+  document.getElementById('shop-modal').classList.remove('hide');
+  setTimeout(focusFirstModalButton, 0);
+}
+function hideShop() {
+  document.getElementById('shop-modal').classList.add('hide');
+}
+
+// ===== Inventario (modal) =====
+// Muestra los power-ups comprados; "Usar" lo aplica al player 1 al instante.
+function populateInventory() {
+  const body = document.getElementById('inventory-body');
+  if (!body) return;
+  const types = Object.keys(inventory).filter(t => inventory[t] > 0);
+  if (!types.length) {
+    body.innerHTML = '<div style="opacity:0.7;padding:10px;">Inventario vacío. Andá a la tienda a comprar power-ups.</div>';
+    return;
+  }
+  let html = '';
+  for (const t of types) {
+    const item = SHOP_ITEMS.find(i => i.type === t);
+    if (!item) continue;
+    const count = inventory[t];
+    const canUse = game.state === 'playing' && game.players && game.players[0] && !game.players[0].eliminated;
+    html += `<div class="shop-item">
+      <div class="shop-head"><span class="shop-emoji">${item.emoji}</span> ${item.name} <span class="shop-inv-count">x${count}</span></div>
+      <div class="shop-desc">${item.desc}</div>
+      <div class="shop-actions">
+        <button class="shop-use-btn" data-type="${t}" ${canUse ? '' : 'disabled'}>Usar</button>
+        ${canUse ? '' : '<span style="opacity:0.7;font-size:0.85em;">(jugá un nivel para usar)</span>'}
+      </div>
+    </div>`;
+  }
+  body.innerHTML = html;
+  body.querySelectorAll('.shop-use-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      if (!consumeFromInventory(type)) return;
+      // Aplicar al jugador 1 (o al jugador 2 si está vivo y el 1 no; por simplicidad: al primero vivo)
+      const target = (game.players || []).find(p => p && !p.eliminated) || game.players?.[0];
+      if (target) applyPowerUp(type, target);
+      populateInventory();
+      // Cerrar la pausa para que el chico vea el efecto al toque
+      hideInventory();
+      hidePauseModal();
+      // Quitar la pausa real del juego
+      if (game.state === 'playing') {
+        game.paused = false;
+        const pb = document.getElementById('btn-pause');
+        if (pb) pb.textContent = '⏸';
+      }
+    });
+  });
+}
+function showInventory() {
+  populateInventory();
+  clearAllKeys();
+  document.getElementById('inventory-modal').classList.remove('hide');
+  setTimeout(focusFirstModalButton, 0);
+}
+function hideInventory() {
+  document.getElementById('inventory-modal').classList.add('hide');
+}
+
+// ===== Pausa (modal) =====
+function showPauseModal() {
+  refreshWalletDisplays();
+  document.getElementById('pause-modal').classList.remove('hide');
+  clearAllKeys();
+  setTimeout(focusFirstModalButton, 0);
+}
+function hidePauseModal() {
+  document.getElementById('pause-modal').classList.add('hide');
 }
 
 // ===== Selector de niveles (modal) =====
@@ -9631,7 +10182,9 @@ function populateLevelsModal() {
 }
 function showLevelsModal() {
   populateLevelsModal();
+  clearAllKeys();
   document.getElementById('levels-modal').classList.remove('hide');
+  setTimeout(focusFirstModalButton, 0);
 }
 function hideLevelsModal() {
   document.getElementById('levels-modal').classList.add('hide');
@@ -9682,17 +10235,52 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
 refreshSpeedButtons();
 
 document.getElementById('menu-levels').addEventListener('click', (e) => { e.stopPropagation(); showLevelsModal(); });
+document.getElementById('menu-shop').addEventListener('click', (e) => { e.stopPropagation(); showShop(); });
 document.getElementById('menu-keybinds').addEventListener('click', (e) => { e.stopPropagation(); showKeybinds(); });
 document.getElementById('menu-ranking').addEventListener('click', (e) => { e.stopPropagation(); showRanking(); });
 document.getElementById('menu-reset').addEventListener('click', (e) => {
   e.stopPropagation();
-  if (confirm('¿Seguro que querés reiniciar todo el progreso? (perfil, niveles, ranking y teclas)')) {
+  if (confirm('¿Seguro que querés reiniciar todo el progreso? (perfil, niveles, ranking, teclas, monedas e inventario)')) {
     resetNachoTodo();
   }
 });
 document.getElementById('levels-close').addEventListener('click', (e) => { e.stopPropagation(); hideLevelsModal(); });
 document.getElementById('levels-modal').addEventListener('click', (e) => {
   if (e.target.id === 'levels-modal') hideLevelsModal();
+});
+
+// ===== Hooks tienda + inventario + pausa =====
+document.getElementById('shop-close').addEventListener('click', (e) => { e.stopPropagation(); hideShop(); });
+document.getElementById('shop-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'shop-modal') hideShop();
+});
+document.getElementById('inventory-close').addEventListener('click', (e) => { e.stopPropagation(); hideInventory(); });
+document.getElementById('inventory-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'inventory-modal') hideInventory();
+});
+document.getElementById('pause-resume').addEventListener('click', (e) => {
+  e.stopPropagation();
+  hidePauseModal();
+  game.paused = false;
+  const pb = document.getElementById('btn-pause');
+  if (pb) pb.textContent = '⏸';
+});
+document.getElementById('pause-shop').addEventListener('click', (e) => { e.stopPropagation(); showShop(); });
+document.getElementById('pause-inventory').addEventListener('click', (e) => { e.stopPropagation(); showInventory(); });
+document.getElementById('pause-levels').addEventListener('click', (e) => { e.stopPropagation(); showLevelsModal(); });
+document.getElementById('pause-menu').addEventListener('click', (e) => {
+  e.stopPropagation();
+  hidePauseModal();
+  game.paused = false;
+  showMenu();
+});
+document.getElementById('pause-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'pause-modal') {
+    hidePauseModal();
+    game.paused = false;
+    const pb = document.getElementById('btn-pause');
+    if (pb) pb.textContent = '⏸';
+  }
 });
 
 // ===== INIT: restaurar progreso guardado + mostrar menú =====
