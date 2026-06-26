@@ -7861,9 +7861,9 @@ const LEVELS = [
     goal: { x: 2310, y: 340, w: 40, h: 110 },
     platforms: [
       { x: 0, y: 450, w: 2400, h: 50, color: '#5a3010' }, // suelo continuo
-      // Vigas de soporte
-      { x: 200, y: 320, w: 140, h: 14, color: '#7a4a20' },
-      { x: 440, y: 260, w: 140, h: 14, color: '#7a4a20' },
+      // Vigas de soporte (primeras dos bajadas 40px para que el chico las alcance)
+      { x: 200, y: 360, w: 140, h: 14, color: '#7a4a20' },
+      { x: 440, y: 300, w: 140, h: 14, color: '#7a4a20' },
       { x: 700, y: 320, w: 140, h: 14, color: '#7a4a20' },
       // Arena del jefe
       { x: 1100, y: 320, w: 140, h: 14, color: '#7a4a20' },
@@ -7873,8 +7873,8 @@ const LEVELS = [
       { x: 2200, y: 320, w: 140, h: 14, color: '#7a4a20' },
     ],
     coins: [
-      { x: 100, y: 410 }, { x: 240, y: 280 },
-      { x: 480, y: 220 }, { x: 740, y: 280 },
+      { x: 100, y: 410 }, { x: 240, y: 320 },
+      { x: 480, y: 260 }, { x: 740, y: 280 },
       { x: 900, y: 410 }, { x: 1140, y: 280 },
       { x: 1440, y: 220 }, { x: 1500, y: 220 },
       { x: 1740, y: 280 }, { x: 2040, y: 220 },
@@ -7887,8 +7887,8 @@ const LEVELS = [
       { type: 'topo', x: 1500, y: 410, range: 380 },
     ],
     powerups: [
-      { type: 'excavar', x: 240, y: 280 },         // intro
-      { type: 'bola_tierra', x: 480, y: 220 },     // bola de tierra (clave contra el topo)
+      { type: 'excavar', x: 240, y: 320 },         // intro (primera viga bajada)
+      { type: 'bola_tierra', x: 480, y: 260 },     // bola de tierra (segunda viga bajada)
       { type: 'shield', x: 1140, y: 280 },         // escudo (contra la tierra del topo)
       { type: 'bola_tierra', x: 1740, y: 280 },    // refill bola de tierra
       { type: 'star', x: 2040, y: 220 },
