@@ -782,6 +782,9 @@ class Player {
     this.picarTime = 0;
     this.flyTime = 0;
     this.inWater = false;
+    // Mundos 17-18 (Excavación / Excavadora)
+    this.excavarTime = 0;    // tirar tierra rápida (proyectil chico marrón)
+    this.bolaTierraTime = 0; // bola de tierra grande que entierra al enemigo (daño doble)
   }
   update(dt, keys) {
     // Decrementar timers de power-ups
@@ -808,6 +811,9 @@ class Player {
     if (this.submarinoTime > 0) this.submarinoTime -= dt;
     if (this.picarTime > 0) this.picarTime -= dt;
     if (this.flyTime > 0) this.flyTime -= dt;
+    // Mundos 17-18
+    if (this.excavarTime > 0) this.excavarTime -= dt;
+    if (this.bolaTierraTime > 0) this.bolaTierraTime -= dt;
     if (this.tinyTime > 0) {
       this.tinyTime -= dt;
       if (this.tinyTime <= 0) this.setTiny(false);
@@ -998,6 +1004,21 @@ class Player {
         game.projectiles.push(pr);
         this.punchCooldown = 0.4;
         for (let i = 0; i < 8; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#ffffff'));
+      } else if (this.bolaTierraTime > 0) {
+        // Bola de tierra grande (Mundos 17-18) — entierra al enemigo, daño doble
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 6, -1, 'bola_tierra_p');
+        pr.friendly = true; pr.owner = this; pr.damage = 2;
+        pr.w = 20; pr.h = 20;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.5;
+        for (let i = 0; i < 10; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#7a4a20'));
+      } else if (this.excavarTime > 0) {
+        // Tirar tierra rápida (Mundos 17-18)
+        const pr = new Projectile(muzzleX, muzzleY, this.facing * 11, 0, 'tierra_p');
+        pr.friendly = true; pr.owner = this;
+        game.projectiles.push(pr);
+        this.punchCooldown = 0.3;
+        for (let i = 0; i < 6; i++) game.particles.push(new Particle(muzzleX, muzzleY, '#8a6040'));
       } else if (this.picarTime > 0) {
         // Picotazo (como puñetazo pero alcance corto + naranja)
         const hx = this.facing === 1 ? this.x + this.w : this.x - 30;
@@ -2189,6 +2210,56 @@ class PowerUp {
       ctx.fillStyle = '#000';
       ctx.beginPath(); ctx.arc(-7, -3, 1, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
+    } else if (this.type === 'excavar') {
+      // ⛏️ Pico minero — pala/pico marrón con cabeza gris
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      ctx.rotate(-0.4 + Math.sin(this.phase) * 0.1);
+      // Mango de madera
+      ctx.fillStyle = '#7a4a20';
+      ctx.fillRect(-2, -3, 4, 18);
+      ctx.fillStyle = '#5a3010';
+      ctx.fillRect(-2, 0, 4, 2);
+      // Cabeza del pico (gris metálico)
+      ctx.fillStyle = '#888';
+      ctx.fillRect(-12, -8, 24, 6);
+      ctx.fillStyle = '#bbb';
+      ctx.fillRect(-12, -8, 24, 2);
+      // Puntas
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.moveTo(-12, -8); ctx.lineTo(-15, -5); ctx.lineTo(-12, -2);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(12, -8); ctx.lineTo(15, -5); ctx.lineTo(12, -2);
+      ctx.closePath(); ctx.fill();
+      // Tierra cayendo del pico
+      ctx.fillStyle = '#7a4a20';
+      ctx.fillRect(-4, 12, 2, 2);
+      ctx.fillRect(3, 13, 2, 2);
+      ctx.restore();
+    } else if (this.type === 'bola_tierra') {
+      // 🟫 Bola de tierra grande
+      ctx.save();
+      ctx.translate(x + 14, y + 14);
+      // Halo
+      ctx.fillStyle = 'rgba(122, 74, 32, 0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+      // Bola marrón
+      ctx.fillStyle = '#7a4a20';
+      ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+      // Sombra interna
+      ctx.fillStyle = '#5a3010';
+      ctx.beginPath(); ctx.arc(2, 3, 7, 0, Math.PI * 2); ctx.fill();
+      // Highlight
+      ctx.fillStyle = '#a06030';
+      ctx.beginPath(); ctx.arc(-4, -4, 4, 0, Math.PI * 2); ctx.fill();
+      // Detalles (piedritas)
+      ctx.fillStyle = '#3a1f0a';
+      ctx.fillRect(-7, 1, 2, 2);
+      ctx.fillRect(4, -2, 2, 2);
+      ctx.fillRect(-2, 6, 2, 2);
+      ctx.restore();
     } else if (this.type === 'volar') {
       // 🦅 Alitas blancas con corazón celeste (ave)
       ctx.save();
@@ -2267,6 +2338,9 @@ function applyPowerUp(type, targetPlayer) {
   else if (type === 'submarino') p.submarinoTime = Math.max(p.submarinoTime, 15);
   else if (type === 'picar') p.picarTime = Math.max(p.picarTime, 12);
   else if (type === 'volar') p.flyTime = Math.max(p.flyTime, 8);
+  // Mundos 17-18 (Excavación / Excavadora)
+  else if (type === 'excavar') p.excavarTime = Math.max(p.excavarTime, 12);
+  else if (type === 'bola_tierra') p.bolaTierraTime = Math.max(p.bolaTierraTime, 12);
 }
 
 // ============ PROJECTILE (bolas de nieve, rocas de hielo, fuego) ============
@@ -2290,8 +2364,12 @@ class Projectile {
              this.type === 'fireball_p' || this.type === 'torpedo_p' ||
              this.type === 'lightning_pkmn' || this.type === 'water_jet' ||
              this.type === 'flame_breath' || this.type === 'nose' ||
-             this.type === 'super_torpedo' || this.type === 'feather_proj') this.vy += 0;
+             this.type === 'super_torpedo' || this.type === 'feather_proj' ||
+             this.type === 'tierra_p') this.vy += 0;
+    else if (this.type === 'bola_tierra_p') this.vy += 0.15;
     else if (this.type === 'pkmn_fire' || this.type === 'snowball') this.vy += 0.18;
+    else if (this.type === 'topo_tierra') this.vy += 0.18;
+    else if (this.type === 'bulldozer_roca') this.vy += 0.32;
     else this.vy += 0.25;
     // Movimientos especiales por tipo
     if (this.type === 'lightning_bolt' || this.type === 'lightning_pkmn') {
@@ -2625,6 +2703,68 @@ class Projectile {
       ctx.beginPath();
       ctx.moveTo(-2, 8); ctx.lineTo(0, 12); ctx.lineTo(2, 8);
       ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'topo_tierra') {
+      // Tierra que tira el topo
+      ctx.save();
+      ctx.translate(x + 7, y + 7);
+      ctx.rotate(this.spin);
+      ctx.fillStyle = '#7a4a20';
+      ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#3a1f0a';
+      ctx.fillRect(-2, -1, 2, 2);
+      ctx.fillRect(2, 1, 2, 2);
+      ctx.restore();
+    } else if (this.type === 'bulldozer_roca') {
+      // Piedra gris que tira el bulldozer
+      ctx.save();
+      ctx.translate(x + 7, y + 7);
+      ctx.rotate(this.spin * 0.5);
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.moveTo(-7, -2); ctx.lineTo(-3, -7); ctx.lineTo(5, -6);
+      ctx.lineTo(7, 0); ctx.lineTo(4, 6); ctx.lineTo(-4, 5);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#888';
+      ctx.fillRect(-4, -4, 4, 3);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(1, 1, 3, 2);
+      ctx.restore();
+    } else if (this.type === 'tierra_p') {
+      // Tierra rápida — varios cubitos marrones volando
+      ctx.save();
+      ctx.translate(x + 7, y + 7);
+      ctx.rotate(this.spin);
+      ctx.fillStyle = '#7a4a20';
+      ctx.fillRect(-6, -6, 5, 5);
+      ctx.fillRect(0, -3, 4, 4);
+      ctx.fillRect(-3, 2, 5, 4);
+      ctx.fillStyle = '#a06030';
+      ctx.fillRect(-5, -5, 2, 2);
+      ctx.fillStyle = '#3a1f0a';
+      ctx.fillRect(1, 4, 2, 2);
+      ctx.restore();
+    } else if (this.type === 'bola_tierra_p') {
+      // Bola de tierra grande pesada
+      ctx.save();
+      const cx = x + this.w / 2, cy = y + this.h / 2;
+      // Halo de polvo
+      ctx.fillStyle = 'rgba(168, 122, 70, 0.35)';
+      ctx.beginPath(); ctx.arc(cx, cy, this.w * 0.7, 0, Math.PI * 2); ctx.fill();
+      // Bola
+      ctx.fillStyle = '#7a4a20';
+      ctx.beginPath(); ctx.arc(cx, cy, this.w / 2, 0, Math.PI * 2); ctx.fill();
+      // Sombra interna
+      ctx.fillStyle = '#5a3010';
+      ctx.beginPath(); ctx.arc(cx + 2, cy + 3, this.w / 3, 0, Math.PI * 2); ctx.fill();
+      // Brillo
+      ctx.fillStyle = '#a06030';
+      ctx.beginPath(); ctx.arc(cx - 3, cy - 3, this.w / 5, 0, Math.PI * 2); ctx.fill();
+      // Piedritas oscuras
+      ctx.fillStyle = '#3a1f0a';
+      const sp = Math.sin(this.spin) * 2;
+      ctx.fillRect(cx - 6 + sp, cy + 1, 2, 2);
+      ctx.fillRect(cx + 3, cy - 2 - sp, 2, 2);
       ctx.restore();
     } else if (this.type === 'super_torpedo') {
       // Super torpedo plateado (pierce)
@@ -5236,6 +5376,542 @@ class Loro {
   }
 }
 
+// ============ SALCHICHA (enemigo común — Mundo 17 Excavación) ============
+// Rueda horizontalmente como un hot dog. Bajita, fácil de saltar encima.
+class Salchicha {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 32; this.h = 18;
+    this.startX = x;
+    this.range = range || 140;
+    this.vx = -1.4;
+    this.spin = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.spin += Math.abs(this.vx) * 0.15;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    // Pan inferior (beige)
+    ctx.fillStyle = '#e8c280';
+    ctx.fillRect(x, y + 12, 32, 6);
+    ctx.fillStyle = '#c89a50';
+    ctx.fillRect(x, y + 17, 32, 1);
+    // Salchicha (rojo carne)
+    ctx.fillStyle = '#c84030';
+    ctx.fillRect(x + 2, y + 5, 28, 8);
+    // Highlight
+    ctx.fillStyle = '#e06050';
+    ctx.fillRect(x + 4, y + 6, 24, 2);
+    // Mostaza (amarillo)
+    ctx.fillStyle = '#ffd700';
+    const m = Math.floor(this.spin) % 3;
+    ctx.fillRect(x + 6 + m, y + 5, 4, 2);
+    ctx.fillRect(x + 14 + m, y + 6, 4, 2);
+    ctx.fillRect(x + 22 + m, y + 5, 4, 2);
+    // Pan superior
+    ctx.fillStyle = '#e8c280';
+    ctx.fillRect(x, y, 32, 6);
+    ctx.fillStyle = '#c89a50';
+    ctx.fillRect(x, y, 32, 1);
+    // Ojos
+    ctx.fillStyle = '#fff';
+    const eyeX = this.vx < 0 ? 6 : 22;
+    ctx.fillRect(x + eyeX, y + 8, 3, 3);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + eyeX + 1, y + 9, 1, 2);
+    ctx.restore();
+  }
+}
+
+// ============ PERRO SALCHICHA (enemigo común — Mundo 17 Excavación) ============
+// Cuerpo largo, persigue al jugador.
+class PerroSalchicha {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 46; this.h = 20;
+    this.startX = x;
+    this.range = range || 220;
+    this.vx = -1.6;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 1;
+    this.invuln = 0;
+    this.chasing = false;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; this.y += 5; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    // Persigue al player si está cerca
+    const target = getTargetPlayer(this);
+    if (target) {
+      const dx = target.x - this.x;
+      this.chasing = Math.abs(dx) < 240 && Math.abs(target.y - this.y) < 80;
+      if (this.chasing) {
+        this.vx = dx < 0 ? -2.1 : 2.1;
+      }
+    }
+    const sp = this.chasing ? 2.1 : 1.6;
+    if (this.vx < 0) this.vx = -sp; else this.vx = sp;
+    this.x += this.vx;
+    if (!this.chasing) {
+      if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+      if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    }
+    this.walkFrame += Math.abs(this.vx) * 0.25;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Cuerpo largo marrón
+    ctx.fillStyle = '#a05a28';
+    ctx.fillRect(lx + 8, y + 6, 32, 10);
+    // Highlight superior
+    ctx.fillStyle = '#c07840';
+    ctx.fillRect(lx + 8, y + 6, 32, 3);
+    // Cabeza (izquierda)
+    ctx.fillStyle = '#a05a28';
+    ctx.fillRect(lx, y + 2, 12, 12);
+    // Hocico
+    ctx.fillStyle = '#7a3a18';
+    ctx.fillRect(lx, y + 8, 5, 4);
+    // Nariz negra
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx, y + 9, 3, 2);
+    // Ojo
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 6, y + 5, 3, 3);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 7, y + 6, 1, 2);
+    // Oreja caída
+    ctx.fillStyle = '#7a3a18';
+    ctx.fillRect(lx + 8, y, 7, 8);
+    // Patitas (animadas)
+    const lp = Math.sin(this.walkFrame) * 2;
+    const lp2 = Math.cos(this.walkFrame) * 2;
+    ctx.fillStyle = '#7a3a18';
+    ctx.fillRect(lx + 10, y + 16, 3, 4 + lp);
+    ctx.fillRect(lx + 18, y + 16, 3, 4 - lp);
+    ctx.fillRect(lx + 28, y + 16, 3, 4 + lp2);
+    ctx.fillRect(lx + 36, y + 16, 3, 4 - lp2);
+    // Cola
+    ctx.fillStyle = '#a05a28';
+    ctx.fillRect(lx + 40, y + 4, 6, 4);
+    // Líneas si está chasing
+    if (this.chasing) {
+      ctx.strokeStyle = 'rgba(255, 50, 0, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(lx + 40, y + 2); ctx.lineTo(lx + 44, y - 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ============ DINOSAURIO (enemigo común — Mundo 18 Excavadora) ============
+// Grandote, lento, cabezazo.
+class Dinosaurio {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 42; this.h = 50;
+    this.startX = x;
+    this.range = range || 180;
+    this.vx = -0.9;
+    this.walkFrame = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 2;
+    this.invuln = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    this.walkFrame += Math.abs(this.vx) * 0.15;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Cuerpo verde
+    ctx.fillStyle = '#3a8c2e';
+    ctx.fillRect(lx + 10, y + 20, 28, 22);
+    // Panza más clara
+    ctx.fillStyle = '#7ac070';
+    ctx.fillRect(lx + 14, y + 30, 16, 12);
+    // Cuello (curvado)
+    ctx.fillStyle = '#3a8c2e';
+    ctx.fillRect(lx + 4, y + 8, 12, 18);
+    // Cabeza
+    ctx.fillStyle = '#3a8c2e';
+    ctx.fillRect(lx, y, 16, 14);
+    // Hocico abierto
+    ctx.fillStyle = '#aa3030';
+    ctx.fillRect(lx, y + 8, 6, 4);
+    // Dientes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 1, y + 8, 1, 2);
+    ctx.fillRect(lx + 3, y + 8, 1, 2);
+    ctx.fillRect(lx + 1, y + 10, 1, 2);
+    ctx.fillRect(lx + 3, y + 10, 1, 2);
+    // Ojo
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(lx + 8, y + 3, 4, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 10, y + 4, 2, 2);
+    // Cresta espinas verde oscuro en la espalda
+    ctx.fillStyle = '#1a5a18';
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(lx + 14 + i * 6, y + 20);
+      ctx.lineTo(lx + 17 + i * 6, y + 14);
+      ctx.lineTo(lx + 20 + i * 6, y + 20);
+      ctx.closePath(); ctx.fill();
+    }
+    // Patas (animadas)
+    const lp = Math.sin(this.walkFrame) * 2;
+    ctx.fillStyle = '#1a5a18';
+    ctx.fillRect(lx + 14, y + 42, 6, 6 + lp);
+    ctx.fillRect(lx + 28, y + 42, 6, 6 - lp);
+    // Garras
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 13, y + 46 + lp, 8, 2);
+    ctx.fillRect(lx + 27, y + 46 - lp, 8, 2);
+    // Cola
+    ctx.fillStyle = '#3a8c2e';
+    ctx.fillRect(lx + 36, y + 24, 8, 8);
+    ctx.fillStyle = '#1a5a18';
+    ctx.fillRect(lx + 40, y + 22, 4, 4);
+    ctx.restore();
+  }
+}
+
+// ============ TOPO (jefe — Mundo 17 Excavación) ============
+// Sale de la tierra en distintas posiciones, tira tierra al jugador.
+class TopoBoss {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 44; this.h = 40;
+    this.startX = x;
+    this.range = range || 200;
+    this.vx = 0;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 4;
+    this.maxHp = 4;
+    this.invuln = 0;
+    this.isBoss = true;
+    // Ciclo: hiding (oculto bajo tierra) → emerging → exposed → digging → hiding
+    this.phase = 'exposed';
+    this.phaseTimer = 2.0;
+    this.baseY = y; // posición de superficie
+    this.depth = 0; // 0 = expuesto, 1 = enterrado completo
+    this.fireTimer = 1.0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    this.phaseTimer -= dt;
+    if (this.phase === 'exposed') {
+      this.depth = 0;
+      // Tira tierra hacia el jugador
+      this.fireTimer -= dt;
+      if (this.fireTimer <= 0) {
+        this.fireTimer = 1.0;
+        const target = getTargetPlayer(this);
+        if (target) {
+          const dx = target.x - this.x;
+          const dy = target.y - this.y;
+          const d = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+          const sp = 6;
+          const pr = new Projectile(this.x + this.w / 2, this.y + 8, dx / d * sp, dy / d * sp, 'topo_tierra');
+          pr.life = 3;
+          game.projectiles.push(pr);
+        }
+      }
+      if (this.phaseTimer <= 0) { this.phase = 'digging'; this.phaseTimer = 0.7; }
+    } else if (this.phase === 'digging') {
+      this.depth = Math.min(1, this.depth + dt * 2);
+      if (this.phaseTimer <= 0) {
+        // Elegir nueva posición
+        this.x = this.startX + (Math.random() - 0.5) * this.range * 2;
+        this.phase = 'emerging';
+        this.phaseTimer = 0.7;
+      }
+    } else if (this.phase === 'emerging') {
+      this.depth = Math.max(0, this.depth - dt * 2);
+      if (this.phaseTimer <= 0) { this.phase = 'exposed'; this.phaseTimer = 2.5; }
+    }
+    this.y = this.baseY + this.depth * 40;
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // HP bar
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#7a4a20' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 10, y - 14, 7, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 10, y - 14, 7, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    // Montículo de tierra alrededor
+    ctx.fillStyle = '#7a4a20';
+    ctx.beginPath();
+    ctx.ellipse(x + 22, y + 38, 26, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#5a3010';
+    ctx.fillRect(x - 2, y + 36, 48, 4);
+    // Cuerpo del topo (gris oscuro)
+    ctx.fillStyle = '#3a2a25';
+    ctx.fillRect(x + 8, y + 8, 28, 26);
+    // Panza más clara
+    ctx.fillStyle = '#5a4a45';
+    ctx.fillRect(x + 14, y + 18, 16, 14);
+    // Cabeza redonda
+    ctx.fillStyle = '#3a2a25';
+    ctx.beginPath();
+    ctx.arc(x + 22, y + 14, 14, 0, Math.PI * 2);
+    ctx.fill();
+    // Nariz rosa
+    ctx.fillStyle = '#ff6080';
+    ctx.beginPath();
+    ctx.arc(x + 22, y + 18, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Ojos chiquitos (casi cerrados, topo casi ciego)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 14, y + 10, 4, 2);
+    ctx.fillRect(x + 26, y + 10, 4, 2);
+    // Dientes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 20, y + 22, 2, 3);
+    ctx.fillRect(x + 23, y + 22, 2, 3);
+    // Manos garras gigantes (para excavar)
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 2, y + 18, 8, 10);
+    ctx.fillRect(x + 34, y + 18, 8, 10);
+    // Garras puntiagudas
+    ctx.fillStyle = '#444';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + 2 + i * 3, y + 28);
+      ctx.lineTo(x + 4 + i * 3, y + 33);
+      ctx.lineTo(x + 6 + i * 3, y + 28);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 34 + i * 3, y + 28);
+      ctx.lineTo(x + 36 + i * 3, y + 33);
+      ctx.lineTo(x + 38 + i * 3, y + 28);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ============ BULLDOZER (jefe — Mundo 18 Excavadora) ============
+// Manejado por un señor enojado. Patrulla, tira piedras, embiste a velocidad doble.
+class BulldozerBoss {
+  constructor(x, y, range) {
+    this.x = x; this.y = y;
+    this.w = 80; this.h = 56;
+    this.startX = x;
+    this.range = range || 240;
+    this.vx = -1.2;
+    this.defeated = false;
+    this.defeatTime = 0;
+    this.hp = 5;
+    this.maxHp = 5;
+    this.invuln = 0;
+    this.isBoss = true;
+    this.fireTimer = 1.8;
+    this.chargeTimer = 4;
+    this.charging = false;
+    this.chargingTime = 0;
+  }
+  update(dt) {
+    if (this.defeated) { this.defeatTime += dt; return; }
+    if (this.invuln > 0) this.invuln -= dt;
+    // Cada 4s, embiste durante 1.5s
+    this.chargeTimer -= dt;
+    if (this.chargeTimer <= 0) {
+      this.charging = true;
+      this.chargingTime = 1.5;
+      this.chargeTimer = 4;
+      const target = getTargetPlayer(this);
+      if (target) this.vx = target.x < this.x ? -3.2 : 3.2;
+    }
+    if (this.charging) {
+      this.chargingTime -= dt;
+      if (this.chargingTime <= 0) {
+        this.charging = false;
+        this.vx = this.vx < 0 ? -1.2 : 1.2;
+      }
+    }
+    this.x += this.vx;
+    if (this.x < this.startX - this.range) this.vx = Math.abs(this.vx);
+    if (this.x > this.startX + this.range) this.vx = -Math.abs(this.vx);
+    // Tira piedras
+    this.fireTimer -= dt;
+    if (this.fireTimer <= 0) {
+      this.fireTimer = 1.5;
+      const target = getTargetPlayer(this);
+      if (target) {
+        const dir = target.x < this.x ? -1 : 1;
+        const pr = new Projectile(this.x + (dir > 0 ? this.w : 0), this.y + 18, dir * 6, -2, 'bulldozer_roca');
+        pr.life = 3;
+        game.projectiles.push(pr);
+      }
+    }
+  }
+  draw(ctx) {
+    if (this.defeated && this.defeatTime > 0.5) return;
+    const x = Math.round(this.x - game.camera.x);
+    const y = Math.round(this.y);
+    ctx.save();
+    // HP bar
+    for (let i = 0; i < this.maxHp; i++) {
+      ctx.fillStyle = i < this.hp ? '#ffaa00' : '#3a0f0f';
+      ctx.fillRect(x + 4 + i * 10, y - 14, 7, 6);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 4 + i * 10, y - 14, 7, 6);
+    }
+    if (this.invuln > 0 && Math.floor(this.invuln * 14) % 2 === 0) ctx.globalAlpha = 0.4;
+    if (this.defeated) {
+      ctx.translate(x + this.w / 2, y + this.h / 2);
+      ctx.scale(1, -1);
+      ctx.translate(-(x + this.w / 2), -(y + this.h / 2));
+    }
+    const flip = this.vx > 0;
+    if (flip) { ctx.translate(x + this.w, 0); ctx.scale(-1, 1); }
+    const lx = flip ? 0 : x;
+    // Pala (frente, gris)
+    ctx.fillStyle = '#888';
+    ctx.fillRect(lx, y + 24, 16, 28);
+    ctx.fillStyle = '#bbb';
+    ctx.fillRect(lx, y + 24, 16, 4);
+    // Bordes pala
+    ctx.fillStyle = '#444';
+    ctx.fillRect(lx, y + 48, 16, 4);
+    // Cuerpo amarillo
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillRect(lx + 14, y + 16, 50, 36);
+    // Banda negra de seguridad
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 14, y + 28, 50, 4);
+    ctx.fillStyle = '#ffeb00';
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(lx + 14 + i * 10, y + 28, 5, 4);
+    }
+    // Cabina del conductor (vidrio celeste)
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(lx + 30, y, 28, 20);
+    ctx.fillStyle = '#88d4ff';
+    ctx.fillRect(lx + 32, y + 2, 24, 16);
+    // Señor enojado dentro
+    ctx.fillStyle = '#e8c090';
+    ctx.beginPath(); ctx.arc(lx + 44, y + 10, 6, 0, Math.PI * 2); ctx.fill();
+    // Casco naranja
+    ctx.fillStyle = '#ff6020';
+    ctx.fillRect(lx + 38, y + 4, 12, 5);
+    ctx.fillStyle = '#aa3010';
+    ctx.fillRect(lx + 38, y + 8, 12, 2);
+    // Ojos enojados
+    ctx.fillStyle = '#000';
+    ctx.fillRect(lx + 41, y + 10, 2, 2);
+    ctx.fillRect(lx + 45, y + 10, 2, 2);
+    // Boca de "ráaa!"
+    ctx.fillStyle = '#aa3030';
+    ctx.fillRect(lx + 42, y + 14, 4, 2);
+    // Chimenea
+    ctx.fillStyle = '#444';
+    ctx.fillRect(lx + 62, y - 6, 6, 16);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(lx + 62, y - 8, 6, 2);
+    // Humo si está charging
+    if (this.charging) {
+      ctx.fillStyle = 'rgba(80, 80, 80, 0.6)';
+      ctx.beginPath(); ctx.arc(lx + 65, y - 14, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lx + 70, y - 20, 6, 0, Math.PI * 2); ctx.fill();
+    }
+    // Orugas (gris oscuro)
+    ctx.fillStyle = '#222';
+    ctx.fillRect(lx + 10, y + 44, 64, 12);
+    // Rueditas
+    ctx.fillStyle = '#666';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(lx + 18 + i * 12, y + 50, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#222';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(lx + 18 + i * 12, y + 50, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Líneas de furia si charging
+    if (this.charging) {
+      ctx.strokeStyle = 'rgba(255, 50, 0, 0.6)';
+      ctx.lineWidth = 2;
+      const dirS = flip ? 1 : -1;
+      ctx.beginPath();
+      ctx.moveTo(lx + (flip ? 76 : 4), y + 22); ctx.lineTo(lx + (flip ? 80 : 0) + dirS * 4, y + 20);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
 // ============ SECRET DOOR (Mundo 5 - puerta secreta + tesoro) ============
 class SecretDoor {
   constructor(x, y, destX, destY, treasure = []) {
@@ -5437,6 +6113,8 @@ const WORLD_META = {
   jardin:   { num: 14, emoji: '🎒', name: 'Jardín' },
   pinocho:  { num: 15, emoji: '🤥', name: 'Pinocho' },
   ave:      { num: 16, emoji: '🦜', name: 'Ave' },
+  excavacion: { num: 17, emoji: '⛏️', name: 'Excavación' },
+  excavadora: { num: 18, emoji: '🚜', name: 'Excavadora' },
 };
 
 // ============ LEVEL DATA ============
@@ -7121,6 +7799,195 @@ const LEVELS = [
       { type: 'mushroom', x: 2220, y: 240 },
     ],
   },
+
+  // ========== MUNDO 17 — EXCAVACIÓN ==========
+
+  // --- NIVEL 32 — Mina de Salchichas ---
+  {
+    name: 'Excavación — Mina de Salchichas',
+    world: 'excavacion',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2310, y: 340, w: 40, h: 110 },
+    platforms: [
+      // Suelo de tierra
+      { x: 0, y: 450, w: 600, h: 50, color: '#5a3010' },
+      { x: 700, y: 450, w: 500, h: 50, color: '#5a3010' },
+      { x: 1320, y: 450, w: 480, h: 50, color: '#5a3010' },
+      { x: 1900, y: 450, w: 500, h: 50, color: '#5a3010' },
+      // Vigas de mina (madera)
+      { x: 280, y: 360, w: 120, h: 14, color: '#7a4a20' },
+      { x: 500, y: 290, w: 120, h: 14, color: '#7a4a20' },
+      { x: 760, y: 360, w: 140, h: 14, color: '#7a4a20' },
+      { x: 1000, y: 280, w: 140, h: 14, color: '#7a4a20' },
+      { x: 1380, y: 360, w: 140, h: 14, color: '#7a4a20' },
+      { x: 1600, y: 280, w: 120, h: 14, color: '#7a4a20' },
+      { x: 1960, y: 360, w: 140, h: 14, color: '#7a4a20' },
+      { x: 2180, y: 290, w: 120, h: 14, color: '#7a4a20' },
+    ],
+    coins: [
+      { x: 120, y: 410 }, { x: 200, y: 410 },
+      { x: 320, y: 320 }, { x: 380, y: 320 },
+      { x: 540, y: 250 }, { x: 580, y: 250 },
+      { x: 800, y: 320 }, { x: 860, y: 320 },
+      { x: 1040, y: 240 }, { x: 1080, y: 240 },
+      { x: 1420, y: 320 }, { x: 1480, y: 320 },
+      { x: 1640, y: 240 }, { x: 2000, y: 320 },
+      { x: 2040, y: 320 }, { x: 2220, y: 250 },
+      { x: 2280, y: 410 },
+    ],
+    enemies: [
+      { type: 'salchicha', x: 320, y: 432, range: 100 },
+      { type: 'perro_salchicha', x: 800, y: 430, range: 160 },
+      { type: 'salchicha', x: 1400, y: 432, range: 110 },
+      { type: 'perro_salchicha', x: 1700, y: 430, range: 140 },
+      { type: 'salchicha', x: 2000, y: 432, range: 90 },
+    ],
+    powerups: [
+      { type: 'excavar', x: 200, y: 410 },         // intro: pico minero
+      { type: 'feather', x: 540, y: 250 },         // doble salto para vigas altas
+      { type: 'bola_tierra', x: 1040, y: 240 },    // bola de tierra
+      { type: 'star', x: 1640, y: 240 },
+      { type: 'excavar', x: 2040, y: 320 },        // refill
+    ],
+  },
+
+  // --- NIVEL 33 — La Madriguera (JEFE Topo) ---
+  {
+    name: 'Excavación — La Madriguera del Topo',
+    world: 'excavacion',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2310, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 2400, h: 50, color: '#5a3010' }, // suelo continuo
+      // Vigas de soporte
+      { x: 200, y: 320, w: 140, h: 14, color: '#7a4a20' },
+      { x: 440, y: 260, w: 140, h: 14, color: '#7a4a20' },
+      { x: 700, y: 320, w: 140, h: 14, color: '#7a4a20' },
+      // Arena del jefe
+      { x: 1100, y: 320, w: 140, h: 14, color: '#7a4a20' },
+      { x: 1400, y: 260, w: 200, h: 14, color: '#7a4a20' },
+      { x: 1700, y: 320, w: 140, h: 14, color: '#7a4a20' },
+      { x: 2000, y: 260, w: 140, h: 14, color: '#7a4a20' },
+      { x: 2200, y: 320, w: 140, h: 14, color: '#7a4a20' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 240, y: 280 },
+      { x: 480, y: 220 }, { x: 740, y: 280 },
+      { x: 900, y: 410 }, { x: 1140, y: 280 },
+      { x: 1440, y: 220 }, { x: 1500, y: 220 },
+      { x: 1740, y: 280 }, { x: 2040, y: 220 },
+      { x: 2240, y: 280 },
+    ],
+    enemies: [
+      { type: 'perro_salchicha', x: 600, y: 430, range: 160 },
+      { type: 'salchicha', x: 900, y: 432, range: 100 },
+      // JEFE: Topo (sale en el centro de la arena)
+      { type: 'topo', x: 1500, y: 410, range: 380 },
+    ],
+    powerups: [
+      { type: 'excavar', x: 240, y: 280 },         // intro
+      { type: 'bola_tierra', x: 480, y: 220 },     // bola de tierra (clave contra el topo)
+      { type: 'shield', x: 1140, y: 280 },         // escudo (contra la tierra del topo)
+      { type: 'bola_tierra', x: 1740, y: 280 },    // refill bola de tierra
+      { type: 'star', x: 2040, y: 220 },
+      { type: 'mushroom', x: 2240, y: 280 },
+    ],
+  },
+
+  // ========== MUNDO 18 — EXCAVADORA ==========
+
+  // --- NIVEL 34 — Sitio de Construcción ---
+  {
+    name: 'Excavadora — Sitio de Construcción',
+    world: 'excavadora',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2310, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 500, h: 50, color: '#7a6048' },  // tierra de obra
+      { x: 600, y: 450, w: 480, h: 50, color: '#7a6048' },
+      { x: 1180, y: 450, w: 460, h: 50, color: '#7a6048' },
+      { x: 1740, y: 450, w: 660, h: 50, color: '#7a6048' },
+      // Vigas de hierro (gris)
+      { x: 240, y: 360, w: 140, h: 14, color: '#888' },
+      { x: 440, y: 280, w: 140, h: 14, color: '#888' },
+      { x: 680, y: 360, w: 140, h: 14, color: '#888' },
+      { x: 920, y: 280, w: 160, h: 14, color: '#888' },
+      { x: 1240, y: 360, w: 140, h: 14, color: '#888' },
+      { x: 1460, y: 280, w: 140, h: 14, color: '#888' },
+      { x: 1680, y: 360, w: 140, h: 14, color: '#888' },
+      { x: 1920, y: 280, w: 160, h: 14, color: '#888' },
+      { x: 2160, y: 360, w: 140, h: 14, color: '#888' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 280, y: 320 },
+      { x: 480, y: 240 }, { x: 720, y: 320 },
+      { x: 960, y: 240 }, { x: 1020, y: 240 },
+      { x: 1280, y: 320 }, { x: 1500, y: 240 },
+      { x: 1720, y: 320 }, { x: 1960, y: 240 },
+      { x: 2020, y: 240 }, { x: 2200, y: 320 },
+      { x: 2280, y: 410 },
+    ],
+    enemies: [
+      { type: 'dinosaurio', x: 480, y: 400, range: 120 },
+      { type: 'dinosaurio', x: 1020, y: 400, range: 140 },
+      { type: 'dinosaurio', x: 1620, y: 400, range: 150 },
+      { type: 'dinosaurio', x: 2080, y: 400, range: 120 },
+    ],
+    powerups: [
+      { type: 'excavar', x: 100, y: 410 },         // intro
+      { type: 'bola_tierra', x: 480, y: 240 },
+      { type: 'feather', x: 960, y: 240 },
+      { type: 'shield', x: 1500, y: 240 },
+      { type: 'excavar', x: 1960, y: 240 },        // refill
+    ],
+  },
+
+  // --- NIVEL 35 — El Bulldozer (JEFE Bulldozer) ---
+  {
+    name: 'Excavadora — El Bulldozer',
+    world: 'excavadora',
+    levelWidth: 2400,
+    playerStart: { x: 50, y: 380 },
+    goal: { x: 2310, y: 340, w: 40, h: 110 },
+    platforms: [
+      { x: 0, y: 450, w: 2400, h: 50, color: '#7a6048' }, // suelo continuo
+      // Vigas de hierro
+      { x: 220, y: 320, w: 140, h: 14, color: '#888' },
+      { x: 440, y: 260, w: 140, h: 14, color: '#888' },
+      { x: 700, y: 320, w: 140, h: 14, color: '#888' },
+      // Arena del jefe — vigas más altas para esquivar embiste
+      { x: 1100, y: 320, w: 140, h: 14, color: '#888' },
+      { x: 1380, y: 240, w: 220, h: 14, color: '#888' },
+      { x: 1700, y: 320, w: 140, h: 14, color: '#888' },
+      { x: 1980, y: 240, w: 160, h: 14, color: '#888' },
+      { x: 2200, y: 320, w: 140, h: 14, color: '#888' },
+    ],
+    coins: [
+      { x: 100, y: 410 }, { x: 260, y: 280 },
+      { x: 480, y: 220 }, { x: 740, y: 280 },
+      { x: 900, y: 410 }, { x: 1140, y: 280 },
+      { x: 1420, y: 200 }, { x: 1500, y: 200 },
+      { x: 1740, y: 280 }, { x: 2020, y: 200 },
+      { x: 2240, y: 280 },
+    ],
+    enemies: [
+      { type: 'dinosaurio', x: 600, y: 400, range: 150 },
+      { type: 'dinosaurio', x: 900, y: 400, range: 130 },
+      // JEFE: Bulldozer (patrulla la arena)
+      { type: 'bulldozer', x: 1500, y: 394, range: 350 },
+    ],
+    powerups: [
+      { type: 'excavar', x: 260, y: 280 },         // intro
+      { type: 'bola_tierra', x: 480, y: 220 },     // clave contra el jefe
+      { type: 'shield', x: 1140, y: 280 },         // escudo contra las piedras
+      { type: 'bola_tierra', x: 1740, y: 280 },    // refill
+      { type: 'star', x: 2020, y: 200 },
+      { type: 'mushroom', x: 2240, y: 280 },
+    ],
+  },
 ];
 
 // Wrapper para dañar a un player específico en el game loop
@@ -7174,6 +8041,12 @@ function spawnEnemy(e) {
   if (e.type === 'avestruz') return new Avestruz(e.x, e.y, e.range);
   if (e.type === 'pinguino_agua') return new PinguinoAgua(e.x, e.y, e.range);
   if (e.type === 'loro') return new Loro(e.x, e.y, e.range);
+  // Mundos 17-18
+  if (e.type === 'salchicha') return new Salchicha(e.x, e.y, e.range);
+  if (e.type === 'perro_salchicha') return new PerroSalchicha(e.x, e.y, e.range);
+  if (e.type === 'dinosaurio') return new Dinosaurio(e.x, e.y, e.range);
+  if (e.type === 'topo') return new TopoBoss(e.x, e.y, e.range);
+  if (e.type === 'bulldozer') return new BulldozerBoss(e.x, e.y, e.range);
   return null;
 }
 
@@ -7201,7 +8074,7 @@ function loadPref(key, fallback) {
 // ============ SALA BONUS — niveles de jefe (último de cada mundo) ============
 // Para cada nivel de jefe, una puerta secreta dorada lleva a una sala con muchas
 // monedas. Volvés solo (cuando juntás todas o se acaba el timer) al nivel original.
-const BOSS_LEVEL_INDICES = [2, 5, 7, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+const BOSS_LEVEL_INDICES = [2, 5, 7, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34];
 function isBossLevel(idx) { return BOSS_LEVEL_INDICES.includes(idx); }
 
 // Plataformas + monedas de la sala bonus (las mismas para todos los mundos por ahora).
@@ -7533,7 +8406,153 @@ function drawBackground() {
   if (world === 'jardin') return drawJardinBg();
   if (world === 'pinocho') return drawPinochoBg();
   if (world === 'ave') return drawAveBg();
+  if (world === 'excavacion') return drawExcavacionBg();
+  if (world === 'excavadora') return drawExcavadoraBg();
   return drawJungleBg();
+}
+
+// ============ MUNDO 17 — EXCAVACIÓN ============
+function drawExcavacionBg() {
+  const camX = game.camera.x;
+  // Cielo de cueva — gradient marrón oscuro
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#2a1810');
+  sky.addColorStop(0.5, '#3a2418');
+  sky.addColorStop(1, '#5a3818');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  // Estratos de tierra al fondo
+  for (let i = 0; i < 4; i++) {
+    const y = 80 + i * 80;
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(90, 50, 20, 0.4)' : 'rgba(70, 40, 16, 0.5)';
+    ctx.fillRect(0, y, W, 80);
+  }
+  // Estalactitas colgando del techo
+  for (let i = -1; i < 10; i++) {
+    const x = i * 240 - (camX * 0.2) % 240;
+    ctx.fillStyle = 'rgba(70, 40, 20, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + 30, 50); ctx.lineTo(x + 60, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(110, 70, 35, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(x + 80, 0); ctx.lineTo(x + 100, 35); ctx.lineTo(x + 120, 0);
+    ctx.closePath(); ctx.fill();
+  }
+  // Vetas de mineral (dorado y plata)
+  for (let i = -1; i < 14; i++) {
+    const x = i * 180 - (camX * 0.4) % 180;
+    const y = 200 + (i * 37) % 150;
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.35)';
+    ctx.beginPath(); ctx.arc(x + 30, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(192, 192, 200, 0.3)';
+    ctx.beginPath(); ctx.arc(x + 80, y + 30, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  // Lámparas mineras colgando
+  for (let i = -1; i < 8; i++) {
+    const x = i * 300 - (camX * 0.6) % 300;
+    // Cable
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 40, 0); ctx.lineTo(x + 40, 90); ctx.stroke();
+    // Pantalla
+    ctx.fillStyle = '#3a3a3a';
+    ctx.beginPath();
+    ctx.moveTo(x + 28, 90); ctx.lineTo(x + 52, 90); ctx.lineTo(x + 48, 110); ctx.lineTo(x + 32, 110);
+    ctx.closePath(); ctx.fill();
+    // Foco encendido
+    ctx.fillStyle = 'rgba(255, 235, 100, 0.4)';
+    ctx.beginPath(); ctx.arc(x + 40, 115, 25, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffeb00';
+    ctx.beginPath(); ctx.arc(x + 40, 112, 5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Carrito de mina al fondo
+  for (let i = -1; i < 6; i++) {
+    const x = i * 480 - (camX * 0.8) % 480;
+    ctx.fillStyle = 'rgba(60, 40, 20, 0.4)';
+    ctx.fillRect(x + 20, 280, 60, 28);
+    ctx.fillStyle = 'rgba(120, 90, 40, 0.4)';
+    ctx.fillRect(x + 24, 284, 52, 6);
+    // Ruedas
+    ctx.fillStyle = 'rgba(30, 20, 10, 0.5)';
+    ctx.beginPath(); ctx.arc(x + 32, 312, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 68, 312, 6, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ============ MUNDO 18 — EXCAVADORA ============
+function drawExcavadoraBg() {
+  const camX = game.camera.x;
+  // Cielo de obra — celeste con tinte naranja
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#88aac0');
+  sky.addColorStop(0.6, '#c0a890');
+  sky.addColorStop(1, '#8a7058');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  // Sol con polvo
+  ctx.fillStyle = 'rgba(255, 200, 100, 0.5)';
+  ctx.beginPath(); ctx.arc(600, 90, 50, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(600, 90, 32, 0, Math.PI * 2); ctx.fill();
+  // Grúas al fondo
+  for (let i = -1; i < 6; i++) {
+    const x = i * 480 - (camX * 0.15) % 480;
+    // Torre
+    ctx.fillStyle = 'rgba(255, 170, 0, 0.5)';
+    ctx.fillRect(x + 60, 100, 12, 220);
+    // Brazo horizontal
+    ctx.fillRect(x + 20, 100, 120, 8);
+    // Contrapeso
+    ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
+    ctx.fillRect(x + 15, 95, 14, 20);
+    // Cable de carga
+    ctx.strokeStyle = 'rgba(30, 30, 30, 0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 100, 108); ctx.lineTo(x + 100, 180); ctx.stroke();
+    // Carga (caja)
+    ctx.fillStyle = 'rgba(120, 80, 40, 0.5)';
+    ctx.fillRect(x + 90, 180, 20, 18);
+  }
+  // Edificios en construcción
+  for (let i = -1; i < 8; i++) {
+    const x = i * 320 - (camX * 0.3) % 320;
+    // Esqueleto del edificio (vigas grises)
+    ctx.fillStyle = 'rgba(60, 60, 60, 0.45)';
+    ctx.fillRect(x + 30, 200, 6, 250);
+    ctx.fillRect(x + 100, 200, 6, 250);
+    // Pisos
+    for (let f = 0; f < 4; f++) {
+      ctx.fillRect(x + 30, 240 + f * 50, 76, 4);
+    }
+    // Andamios
+    ctx.strokeStyle = 'rgba(180, 100, 40, 0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 25, 250); ctx.lineTo(x + 110, 250);
+    ctx.moveTo(x + 25, 300); ctx.lineTo(x + 110, 300);
+    ctx.moveTo(x + 25, 350); ctx.lineTo(x + 110, 350);
+    ctx.stroke();
+  }
+  // Conos de seguridad al frente
+  for (let i = -1; i < 12; i++) {
+    const x = i * 220 - (camX * 0.7) % 220;
+    // Cono naranja
+    ctx.fillStyle = 'rgba(255, 96, 0, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(x + 40, 380); ctx.lineTo(x + 30, 420); ctx.lineTo(x + 50, 420);
+    ctx.closePath(); ctx.fill();
+    // Banda blanca
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillRect(x + 33, 400, 14, 3);
+    // Base negra
+    ctx.fillStyle = 'rgba(20, 20, 20, 0.7)';
+    ctx.fillRect(x + 28, 418, 24, 4);
+  }
+  // Polvo al aire
+  for (let i = -1; i < 30; i++) {
+    const x = (i * 100 + game.time * 30 - camX * 0.5) % (W + 100);
+    const y = 150 + (i * 73) % 250;
+    ctx.fillStyle = 'rgba(200, 170, 130, 0.3)';
+    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
 function drawJungleBg() {
@@ -9720,12 +10739,13 @@ function gameUpdate(dt) {
                                           pr.y < b.y + b.h && pr.y + pr.h > b.y;
               if (!overlapsBox(legL) && !overlapsBox(legR)) continue;
             }
-            e.hp--;
+            e.hp -= (pr.damage || 1);
             if (e.hp <= 0) {
               e.defeated = true;
               const count = e.isBoss ? 28 : 14;
+              const col = pr.type === 'tierra_p' || pr.type === 'bola_tierra_p' ? '#7a4a20' : '#ff8800';
               for (let i = 0; i < count; i++)
-                game.particles.push(new Particle(e.x + e.w/2, e.y + e.h/2, '#ff8800'));
+                game.particles.push(new Particle(e.x + e.w/2, e.y + e.h/2, col));
             } else {
               e.invuln = e.isBoss ? 1.0 : 0.5;
               for (let i = 0; i < 8; i++)

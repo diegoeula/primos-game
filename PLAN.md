@@ -49,6 +49,10 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
 | 29 | Las Mentiras de Pinocho | 🤥 15. Pinocho | | 🤥 **Pinocho** (nariz extensible) |
 | 30 | Nido en el Árbol | 🦜 16. Ave | árbol + agua nadable + pingüinos + avestruces | |
 | 31 | Cielo del Loro | 🦜 16. Ave | plataformas de nube | 🦜 **Loro** (plumas en abanico) |
+| 32 | Mina de Salchichas | ⛏️ 17. Excavación | cueva + 🌭 salchichas + 🐕 perros salchicha | |
+| 33 | La Madriguera | ⛏️ 17. Excavación | | 🦫 **Topo** (sale de la tierra, tira tierra) |
+| 34 | Sitio de Construcción | 🚜 18. Excavadora | obra + 🦕 dinosaurios | |
+| 35 | El Bulldozer | 🚜 18. Excavadora | | 🚜 **Bulldozer** (embiste + tira piedras) |
 
 ---
 
@@ -111,6 +115,13 @@ Checklist vivo. Ver [CLAUDE.md](CLAUDE.md) para reglas no negociables del stack.
   - **Pausa con menú** (`#pause-modal`): al pausar (ESC o ⏸) aparece un modal con Continuar / Tienda / Inventario / Cambiar nivel / Menú principal. La pantalla queda jugable visualmente detrás.
   - **Navegación con teclado**: ↑/↓ mueven foco entre botones del modal abierto, Enter activa. Las teclas de movimiento se limpian al abrir cualquier modal (no quedan "pegadas").
   - **Sala bonus** en los 16 niveles de jefe: puerta dorada cerca del spawn, teletransporta a una sala con 25+ monedas; volvés solo al juntar todas o pasados 25s. Snapshot/restore del estado del nivel.
+- [x] **Fase 29 — Mundos 17 (Excavación) + 18 (Excavadora)** (N32-N35):
+  - 3 enemigos nuevos: 🌭 Salchicha (rueda bajita), 🐕 Perro Salchicha (cuerpo largo que persigue), 🦕 Dinosaurio (slow tanky, hp 2)
+  - 2 jefes nuevos: 🦫 Topo (excava y reaparece, tira tierra), 🚜 Bulldozer (patrulla, tira piedras, embiste cada 4s)
+  - 2 power-ups nuevos: ⛏️ Excavar (proyectil rápido de tierra) y 🟫 Bola de Tierra (proyectil grande con `damage: 2` que entierra al enemigo común instantáneo y daña 2 al jefe)
+  - Backgrounds: cueva con estalactitas/lámparas/vetas de mineral · obra con grúas/edificios en construcción/conos
+  - Boss levels (33 y 35) agregados a `BOSS_LEVEL_INDICES` para que tengan sala bonus
+  - Refactor menor: proyectiles ahora usan `pr.damage` (default 1) para soportar bola_tierra haciendo daño doble
 
 ---
 
